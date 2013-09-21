@@ -18,7 +18,7 @@
 #define SPEED (100.0f)
 
 glm::vec3 cam_pos = glm::vec3(0,10,0);
-float cam_angle_horz = 0.0f;
+float cam_angle_horz = 45.0f;
 float cam_angle_vert = 0.0f;
 float cam_fov = 45.0f;
 glm::vec3 cam_direction(
@@ -39,6 +39,7 @@ float get_height(int x, int y) {
     y -= SIZE/2.0f;
     //return (x*x)+(y*y)/50.0f;
     return glm::simplex(glm::vec2(x,y)/80.0f)*1.9f;
+    //return 0;
 }
 
 int main()
@@ -60,6 +61,39 @@ int main()
 
     glEnable(GL_DEPTH_TEST);
 
+    // debug lines
+    GLuint default_vao;
+    glGenVertexArrays(1, &default_vao);
+    glBindVertexArray(default_vao);
+    GLuint default_vbo;
+    glGenBuffers(1, &default_vbo);
+
+    float lines[] = {
+        // xyz color
+        0.0f,   0.0f,   0.0f,   1.0f, 0.0f, 0.0f,
+        SIZE,   0.0f,   0.0f,   1.0f, 0.0f, 0.0f,
+
+        SIZE,   0.0f,   0.0f,   1.0f, 0.0f, 0.0f,
+        SIZE,   0.0f,   SIZE,  1.0f, 0.0f, 0.0f,
+
+        SIZE,   0.0f,   SIZE,   1.0f, 0.0f, 0.0f,
+        0.0f,    0.0f,   SIZE,   1.0f, 0.0f, 0.0f,
+
+        0.0f,    0.0f,   SIZE,   1.0f, 0.0f, 0.0f,
+        0.0f,    0.0f,   0.0f,    1.0f, 0.0f, 0.0f
+    };
+/*
+    float lines[] = {
+        // xyz color
+        0.0f  , 0.0f , 0.0f  , 1.0f , 0.0f , 0.0f ,
+        50.0f , 0.0f , 50.0f , 1.0f , 0.0f , 0.0f ,
+        50.0f , 0.0f , 0.0f  , 1.0f , 0.0f , 0.0f ,
+    };
+    */
+    printf("default_vbo: %d\n", default_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, default_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(lines), lines, GL_STATIC_DRAW);
+
     // Create Vertex Array Object
     GLuint vao;
     glGenVertexArrays( 1, &vao );
@@ -74,19 +108,18 @@ int main()
     for (int y=0; y<SIZE; y++) {
         for (int x=0; x<SIZE; x++) {
             //position
-            vertices[offset++] = x/3.f;
+            vertices[offset++] = x;
             vertices[offset++] = get_height(x,y);
-            vertices[offset++] = y/3.f;
+            vertices[offset++] = y;
             // normal
             float l = get_height(x-1,y);
             float r = get_height(x+1,y);
             float d = get_height(x,y-1);
             float u = get_height(x,y+1);
-            glm::vec3 n = glm::vec3(l-r, d-u, 2.0);
-            float len = n.length();
-            vertices[offset++] = n.x / len;
-            vertices[offset++] = n.y / len;
-            vertices[offset++] = n.z / len;
+            glm::vec3 n = glm::normalize(glm::vec3(l-r, 2.0, d-u));
+            vertices[offset++] = n.x;
+            vertices[offset++] = n.y;
+            vertices[offset++] = n.z;
             // color
             vertices[offset++] = 1.0f;//x / SIZE;
             vertices[offset++] = 0.0f;//y / SIZE;
@@ -117,17 +150,49 @@ int main()
     glEnable(GL_PRIMITIVE_RESTART);
     glPrimitiveRestartIndex(SIZE*SIZE);
 
-    GLuint shaderID = LoadShaders("vert.glsl",  "frag.glsl");
+    GLint posAttrib;
+    GLint norAttrib;
+    GLint colAttrib;
 
-    GLint posAttrib = glGetAttribLocation( shaderID, "position_model" );
-    GLint norAttrib = glGetAttribLocation( shaderID, "normal_model" );
-    GLint colAttrib = glGetAttribLocation( shaderID, "color" );
+    glBindVertexArray(default_vao);
+    glBindBuffer(GL_ARRAY_BUFFER, default_vbo);
+    printf("LOADING DEFAULT SHADER\n");
+    GLuint default_shaderID = LoadShaders("default_vert.glsl",  "default_frag.glsl");
+    posAttrib = glGetAttribLocation( default_shaderID, "position_model" );
+    colAttrib = glGetAttribLocation( default_shaderID, "color" );
+    glEnableVertexAttribArray( posAttrib );
+    glEnableVertexAttribArray( colAttrib );
+    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 6*sizeof(float), 0);
+    glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 6*sizeof(float), (void*)(3*sizeof(float)));
+
+    glBindVertexArray(vao);
+    glBindBuffer( GL_ARRAY_BUFFER, vbo );
+    printf("LOADING NORMAL DEBUG SHADER\n");
+    GLuint norm_shaderID = LoadShaders("norm_vert.glsl",  "norm_frag.glsl", "norm_geo.glsl");
+    posAttrib = glGetAttribLocation(norm_shaderID, "position_model" );
+    norAttrib = glGetAttribLocation(norm_shaderID, "normal_model" );
+    glEnableVertexAttribArray(posAttrib);
+    glEnableVertexAttribArray(norAttrib);
+    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 9*sizeof( float ), 0 );
+    glVertexAttribPointer(norAttrib, 3, GL_FLOAT, GL_FALSE, 9*sizeof(float), (void*)(3*sizeof(float)));
+
+    printf("LOADING LIGHTING SHADER\n");
+    GLuint shaderID = LoadShaders("light_vert.glsl",  "light_frag.glsl");
+    posAttrib = glGetAttribLocation( shaderID, "position_model" );
+    norAttrib = glGetAttribLocation( shaderID, "normal_model" );
+    colAttrib = glGetAttribLocation( shaderID, "color" );
     glEnableVertexAttribArray( posAttrib );
     glEnableVertexAttribArray( norAttrib );
     glEnableVertexAttribArray( colAttrib );
     glVertexAttribPointer( posAttrib, 3, GL_FLOAT, GL_FALSE, 9*sizeof( float ), 0 );
     glVertexAttribPointer( norAttrib, 3, GL_FLOAT, GL_FALSE, 9*sizeof(float), (void*)(3*sizeof(float)));
     glVertexAttribPointer( colAttrib, 3, GL_FLOAT, GL_FALSE, 9*sizeof(float), (void*)(6*sizeof(float)));
+
+    glUseProgram(default_shaderID);
+    GLint default_matrix_id = glGetUniformLocation(default_shaderID, "MVP");
+
+    glUseProgram(norm_shaderID);
+    GLint debug_matrix_id = glGetUniformLocation(norm_shaderID, "MVP");
 
     glUseProgram(shaderID);
     GLint matrix_id = glGetUniformLocation(shaderID, "MVP");
@@ -226,41 +291,56 @@ int main()
 
         cam_up = glm::cross(cam_right, cam_direction);
 
+        glm::mat4 view_matrix = glm::lookAt(cam_pos, cam_pos+cam_direction, cam_up);
+        glm::mat4 model_matrix = glm::mat4(1.0f);
+        glm::mat4 MVP = proj_matrix * view_matrix * model_matrix;
+
         // clear the screen to black
         glClearColor(0.5, 0.5, 0.5, 0.0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+
         // use our shader
         glUseProgram(shaderID);
-
-        glm::mat4 view_matrix = glm::lookAt(cam_pos, cam_pos+cam_direction, cam_up);
-        glm::mat4 model_matrix = glm::mat4(1.0f);
-        glm::mat4 MVP = proj_matrix * view_matrix * model_matrix;
 
         glUniformMatrix4fv(matrix_id, 1, GL_FALSE, &MVP[0][0]);
         glUniformMatrix4fv(model_matrix_id, 1, GL_FALSE, &model_matrix[0][0]);
         glUniformMatrix4fv(view_matrix_id, 1, GL_FALSE, &view_matrix[0][0]);
 
 
-        glm::vec3 light_pos = glm::vec3(50,15,50);
+        glm::vec3 light_pos = glm::vec3(SIZE/2,20,SIZE/2);
         glUniform3f(light_id, light_pos.x, light_pos.y, light_pos.z);
 
+        //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-        // Draw a rectangle from the 2 triangles using 6 indices
+        // surface
+        glBindVertexArray(vao);
+        glBindBuffer( GL_ARRAY_BUFFER, vbo );
         glDrawElements( GL_TRIANGLE_STRIP, SIZE*2*(SIZE-1)+SIZE, GL_UNSIGNED_INT, 0 );
+/*
+        // normal shader
+        glUseProgram(norm_shaderID);
+        glUniformMatrix4fv(debug_matrix_id, 1, GL_FALSE, &MVP[0][0]);
+        glDrawElements( GL_TRIANGLE_STRIP, SIZE*2*(SIZE-1)+SIZE, GL_UNSIGNED_INT, 0 );
+*/
+        // debug box
+        glBindVertexArray(default_vao);
+        glBindBuffer(GL_ARRAY_BUFFER, default_vbo);
+        glUseProgram(default_shaderID);
+        glUniformMatrix4fv(default_matrix_id, 1, GL_FALSE, &MVP[0][0]);
+        glDrawArrays(GL_LINES, 0, sizeof(lines)/sizeof(float)/6);
+
 
         // Swap buffers
         window.display();
     }
 
-    glDeleteProgram( shaderID );
+    //glDeleteProgram( shaderID );
 
-    glDeleteBuffers( 1, &ebo );
-    glDeleteBuffers( 1, &vbo );
+    //glDeleteBuffers( 1, &ebo );
+    //glDeleteBuffers( 1, &vbo );
 
-    glDeleteVertexArrays( 1, &vao );
+    //glDeleteVertexArrays( 1, &vao );
 
     return 0;
 }
