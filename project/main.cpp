@@ -12,39 +12,33 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/noise.hpp>
 
-#include "Camera.h"
+#include "shader.h"
 
-#define SIZE 500
+#define SIZE 100
 #define SPEED (100.0f)
 
-// Shader sources
-const char* vertexSource =
-    "#version 150\n"
-    "in vec3 position;"
-    "in vec3 color;"
-    "out vec3 Color;"
-    "uniform mat4 model;"
-    "uniform mat4 camera;"
-    "void main() {"
-    "   Color = color;"
-    "   gl_Position = camera * model * vec4( position, 1.0 );"
-    "}";
-const char* fragmentSource =
-    "#version 150\n"
-    "in vec3 Color;"
-    "out vec4 outColor;"
-    "void main() {"
-    "   outColor = vec4(Color,1.0);"
-    "}";
-
-// camera
-tdogl::Camera camera;
+glm::vec3 cam_pos = glm::vec3(0,10,0);
+float cam_angle_horz = 0.0f;
+float cam_angle_vert = 0.0f;
+float cam_fov = 45.0f;
+glm::vec3 cam_direction(
+    cos(cam_angle_vert) * sin(cam_angle_horz),
+    sin(cam_angle_vert),
+    cos(cam_angle_vert) * cos(cam_angle_horz)
+);
+glm::vec3 cam_right(
+    sin(cam_angle_horz - 3.14f/2.0f),
+    0,
+    cos(cam_angle_horz - 3.14f/2.0f)
+);
+glm::vec3 cam_up(glm::cross(cam_right,cam_direction));
+glm::mat4 proj_matrix;
 
 float get_height(int x, int y) {
     x -= SIZE/2.0f;
     y -= SIZE/2.0f;
     //return (x*x)+(y*y)/50.0f;
-    return glm::simplex(glm::vec2(x,y)/20.0f);
+    return glm::simplex(glm::vec2(x,y)/80.0f)*1.9f;
 }
 
 int main()
@@ -64,6 +58,8 @@ int main()
     glewExperimental = GL_TRUE;
     glewInit();
 
+    glEnable(GL_DEPTH_TEST);
+
     // Create Vertex Array Object
     GLuint vao;
     glGenVertexArrays( 1, &vao );
@@ -73,7 +69,7 @@ int main()
     GLuint vbo;
     glGenBuffers( 1, &vbo );
 
-    float vertices[SIZE*SIZE*(3+3)];
+    float vertices[SIZE*SIZE*(3+3+3)];
     int offset = 0;
     for (int y=0; y<SIZE; y++) {
         for (int x=0; x<SIZE; x++) {
@@ -81,6 +77,16 @@ int main()
             vertices[offset++] = x/3.f;
             vertices[offset++] = get_height(x,y);
             vertices[offset++] = y/3.f;
+            // normal
+            float l = get_height(x-1,y);
+            float r = get_height(x+1,y);
+            float d = get_height(x,y-1);
+            float u = get_height(x,y+1);
+            glm::vec3 n = glm::vec3(l-r, d-u, 2.0);
+            float len = n.length();
+            vertices[offset++] = n.x / len;
+            vertices[offset++] = n.y / len;
+            vertices[offset++] = n.z / len;
             // color
             vertices[offset++] = 1.0f;//x / SIZE;
             vertices[offset++] = 0.0f;//y / SIZE;
@@ -111,44 +117,26 @@ int main()
     glEnable(GL_PRIMITIVE_RESTART);
     glPrimitiveRestartIndex(SIZE*SIZE);
 
+    GLuint shaderID = LoadShaders("vert.glsl",  "frag.glsl");
 
-    // Create and compile the vertex shader
-    GLuint vertexShader = glCreateShader( GL_VERTEX_SHADER );
-    glShaderSource( vertexShader, 1, &vertexSource, NULL );
-    glCompileShader( vertexShader );
-
-    // Create and compile the fragment shader
-    GLuint fragmentShader = glCreateShader( GL_FRAGMENT_SHADER );
-    glShaderSource( fragmentShader, 1, &fragmentSource, NULL );
-    glCompileShader( fragmentShader );
-
-    // Link the vertex and fragment shader into a shader program
-    GLuint shaderProgram = glCreateProgram();
-    glAttachShader( shaderProgram, vertexShader );
-    glAttachShader( shaderProgram, fragmentShader );
-    glBindFragDataLocation( shaderProgram, 0, "outColor" );
-    glLinkProgram( shaderProgram );
-    glUseProgram( shaderProgram );
-
-    // Specify the layout of the vertex data
-    GLint posAttrib = glGetAttribLocation( shaderProgram, "position" );
+    GLint posAttrib = glGetAttribLocation( shaderID, "position_model" );
+    GLint norAttrib = glGetAttribLocation( shaderID, "normal_model" );
+    GLint colAttrib = glGetAttribLocation( shaderID, "color" );
     glEnableVertexAttribArray( posAttrib );
-    glVertexAttribPointer( posAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof( float ), 0 );
-
-    GLint colAttrib = glGetAttribLocation( shaderProgram, "color" );
+    glEnableVertexAttribArray( norAttrib );
     glEnableVertexAttribArray( colAttrib );
-    glVertexAttribPointer( colAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof( float ), (void*)( 3 * sizeof( float ) ) );
+    glVertexAttribPointer( posAttrib, 3, GL_FLOAT, GL_FALSE, 9*sizeof( float ), 0 );
+    glVertexAttribPointer( norAttrib, 3, GL_FLOAT, GL_FALSE, 9*sizeof(float), (void*)(3*sizeof(float)));
+    glVertexAttribPointer( colAttrib, 3, GL_FLOAT, GL_FALSE, 9*sizeof(float), (void*)(6*sizeof(float)));
 
-    GLint uniModel = glGetUniformLocation( shaderProgram, "model" );
-    GLint uniCamera = glGetUniformLocation( shaderProgram, "camera" );
+    glUseProgram(shaderID);
+    GLint matrix_id = glGetUniformLocation(shaderID, "MVP");
+    GLint view_matrix_id = glGetUniformLocation(shaderID, "V");
+    GLint model_matrix_id = glGetUniformLocation(shaderID, "M");
+    GLint light_id = glGetUniformLocation(shaderID, "light_pos_world");
 
-    glm::mat4 model = glm::mat4(1.0f);
-    camera.setPosition(glm::vec3(0,0,4));
-    camera.setViewportAspectRatio(800.0f/600.0f);
-    camera.setNearAndFarPlanes(0.01f, 10000.0f);
+    glm::mat4 proj_matrix = glm::perspective(cam_fov, 800.0f/600.0f, 0.1f, 100.0f);
 
-
-    int rotate = 1;
     int mouse_pan = 0;
     int mouse_tilt = 0;
     int last_x = 0;
@@ -172,30 +160,27 @@ int main()
                     case sf::Keyboard::Escape:
                         window.close();
                         break;
-                    case sf::Keyboard::R:
-                        rotate = !rotate;
+                    case sf::Keyboard::W:
+                        cam_pos += cam_direction * delta.asSeconds() * SPEED;
                         break;
                     case sf::Keyboard::S:
-                        camera.offsetPosition(SPEED * delta.asSeconds() * -camera.forward());
-                        break;
-                    case sf::Keyboard::W:
-                        camera.offsetPosition(SPEED * delta.asSeconds() * camera.forward());
+                        cam_pos -= cam_direction * delta.asSeconds() * SPEED;
                         break;
                     case sf::Keyboard::A:
-                        camera.offsetPosition(SPEED * delta.asSeconds() * -camera.right());
+                        cam_pos -= cam_right * delta.asSeconds() * SPEED;
                         break;
                     case sf::Keyboard::D:
-                        camera.offsetPosition(SPEED * delta.asSeconds() * camera.right());
+                        cam_pos += cam_right * delta.asSeconds() * SPEED;
                         break;
                     case sf::Keyboard::PageUp:
-                        camera.offsetPosition(SPEED * delta.asSeconds() * glm::vec3(0,1,0));
+                        cam_pos += cam_up * delta.asSeconds() * SPEED;
                         break;
                     case sf::Keyboard::PageDown:
-                        camera.offsetPosition(SPEED * delta.asSeconds() * -glm::vec3(0,1,0));
+                        cam_pos -= cam_up * delta.asSeconds() * SPEED;
                         break;
                 }
             } else if (event.type == sf::Event::MouseWheelMoved) {
-                camera.offsetPosition((float)event.mouseWheel.delta * camera.forward());
+                cam_pos += cam_direction * (float)event.mouseWheel.delta;
             } else if (event.type == sf::Event::MouseButtonPressed) {
                 if (event.mouseButton.button == sf::Mouse::Middle) mouse_pan = 1;
                 if (event.mouseButton.button == sf::Mouse::Left) mouse_tilt = 1;
@@ -207,10 +192,9 @@ int main()
                 int dy = event.mouseMove.y - last_y;
 
                 if (mouse_pan) {
-                    camera.offsetPosition((float)dx * glm::vec3(1.0f, 0.0f, 0.0f));
-                    camera.offsetPosition((float)dy * -glm::vec3(0.0f, 0.0f, 1.0f));
                 } else if (mouse_tilt){
-                    camera.offsetOrientation(-dy * 0.1, -dx * 0.1);
+                    cam_angle_vert += (float)dy * delta.asSeconds() * 0.1f;
+                    cam_angle_horz += (float)dx * delta.asSeconds() * 0.1f;
                 }
 
                 last_x = event.mouseMove.x;
@@ -221,27 +205,45 @@ int main()
             // Adjust the viewport when the window is resized
             if (event.type == sf::Event::Resized) {
                 glViewport(0, 0, event.size.width, event.size.height);
-                camera.setViewportAspectRatio((float)event.size.width/(float)event.size.height);
+                proj_matrix = glm::perspective(45.0f, (float)event.size.width/(float)event.size.height, 0.01f, 10000.0f);
             }
 
 
         }
 
         // update camera vectors
+        cam_direction = glm::vec3(
+                    cos(cam_angle_vert) * sin(cam_angle_horz),
+                    sin(cam_angle_vert),
+                    cos(cam_angle_vert) * cos(cam_angle_horz)
+                );
 
-        // Clear the screen to black
+        cam_right = glm::vec3(
+                    sin(cam_angle_horz - 3.14f/2.0f),
+                    0,
+                    cos(cam_angle_horz - 3.14f/2.0f)
+                );
+
+        cam_up = glm::cross(cam_right, cam_direction);
+
+        // clear the screen to black
         glClearColor(0.5, 0.5, 0.5, 0.0);
-        glClear( GL_COLOR_BUFFER_BIT );
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // camera
-        glUniformMatrix4fv( uniCamera, 1, GL_FALSE, glm::value_ptr(camera.matrix()) );
+        // use our shader
+        glUseProgram(shaderID);
 
-        // Calculate transformation
-        if (rotate) {
-            //model = glm::mat4(1.0f);
-            model = glm::rotate( model, delta.asSeconds() * 45.0f, glm::vec3( 0.0f, 1.0f, 0.0f ));
-        }
-        glUniformMatrix4fv( uniModel, 1, GL_FALSE, glm::value_ptr( model ) );
+        glm::mat4 view_matrix = glm::lookAt(cam_pos, cam_pos+cam_direction, cam_up);
+        glm::mat4 model_matrix = glm::mat4(1.0f);
+        glm::mat4 MVP = proj_matrix * view_matrix * model_matrix;
+
+        glUniformMatrix4fv(matrix_id, 1, GL_FALSE, &MVP[0][0]);
+        glUniformMatrix4fv(model_matrix_id, 1, GL_FALSE, &model_matrix[0][0]);
+        glUniformMatrix4fv(view_matrix_id, 1, GL_FALSE, &view_matrix[0][0]);
+
+
+        glm::vec3 light_pos = glm::vec3(50,15,50);
+        glUniform3f(light_id, light_pos.x, light_pos.y, light_pos.z);
 
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -253,9 +255,7 @@ int main()
         window.display();
     }
 
-    glDeleteProgram( shaderProgram );
-    glDeleteShader( fragmentShader );
-    glDeleteShader( vertexShader );
+    glDeleteProgram( shaderID );
 
     glDeleteBuffers( 1, &ebo );
     glDeleteBuffers( 1, &vbo );
