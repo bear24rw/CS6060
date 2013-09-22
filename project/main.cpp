@@ -14,7 +14,7 @@
 
 #include "shader.h"
 
-#define SIZE 100
+#define SIZE 200
 #define SPEED (100.0f)
 
 glm::vec3 cam_pos = glm::vec3(0,10,0);
@@ -37,8 +37,11 @@ glm::mat4 proj_matrix;
 float get_height(int x, int y) {
     x -= SIZE/2.0f;
     y -= SIZE/2.0f;
-    //return (x*x)+(y*y)/50.0f;
-    return glm::simplex(glm::vec2(x,y)/80.0f)*1.9f;
+    //return ((x*x)+(y*y))/100.0f;
+    //return glm::simplex(glm::vec2(x,y)/50.0f)*3.9f;
+    return glm::simplex(glm::vec2(x,y)/50.0f)*5.0f +
+           fabs(glm::simplex(glm::vec2(x,y)/300.0f)*30.0f);
+    //return fabs(glm::simplex(glm::vec2(x,y)/50.0f)*3.9f);
     //return 0;
 }
 
@@ -80,7 +83,16 @@ int main()
         0.0f,    0.0f,   SIZE,   1.0f, 0.0f, 0.0f,
 
         0.0f,    0.0f,   SIZE,   1.0f, 0.0f, 0.0f,
-        0.0f,    0.0f,   0.0f,    1.0f, 0.0f, 0.0f
+        0.0f,    0.0f,   0.0f,    1.0f, 0.0f, 0.0f,
+        // axis
+        0.0f,   0.0f,   0.0f,   0.0f, 0.0f, 1.0f,
+        2.0f*SIZE,   0.0f,   0.0f,  0.0f, 0.0f, 1.0f,
+
+        0.0f,    0.0f,   0.0f,   1.0f, 0.0f, 0.0f,
+        0.0f,    2.0f*SIZE,   0.0f,    1.0f, 0.0f, 0.0f,
+
+        0.0f,   0.0f,   0.0f,   0.0f, 1.0f, 0.0f,
+        0.0f,    0.0f,   2.0f*SIZE,   0.0f, 1.0f, 0.0f
     };
 /*
     float lines[] = {
@@ -177,7 +189,7 @@ int main()
     glVertexAttribPointer(norAttrib, 3, GL_FLOAT, GL_FALSE, 9*sizeof(float), (void*)(3*sizeof(float)));
 
     printf("LOADING LIGHTING SHADER\n");
-    GLuint shaderID = LoadShaders("light_vert.glsl",  "light_frag.glsl");
+    GLuint shaderID = LoadShaders("sphere_vert.glsl",  "sphere_frag.glsl");
     posAttrib = glGetAttribLocation( shaderID, "position_model" );
     norAttrib = glGetAttribLocation( shaderID, "normal_model" );
     colAttrib = glGetAttribLocation( shaderID, "color" );
@@ -206,6 +218,9 @@ int main()
     int mouse_tilt = 0;
     int last_x = 0;
     int last_y = 0;
+
+    int draw_polys = 0;
+    int draw_norms = 0;
 
     sf::Clock clock;
     while ( window.isOpen() )
@@ -242,6 +257,12 @@ int main()
                         break;
                     case sf::Keyboard::PageDown:
                         cam_pos -= cam_up * delta.asSeconds() * SPEED;
+                        break;
+                    case sf::Keyboard::P:
+                        draw_polys = !draw_polys;
+                        break;
+                    case sf::Keyboard::N:
+                        draw_norms = !draw_norms;
                         break;
                 }
             } else if (event.type == sf::Event::MouseWheelMoved) {
@@ -311,18 +332,24 @@ int main()
         glm::vec3 light_pos = glm::vec3(SIZE/2,20,SIZE/2);
         glUniform3f(light_id, light_pos.x, light_pos.y, light_pos.z);
 
-        //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        if (draw_polys) {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        } else {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        }
 
         // surface
         glBindVertexArray(vao);
         glBindBuffer( GL_ARRAY_BUFFER, vbo );
         glDrawElements( GL_TRIANGLE_STRIP, SIZE*2*(SIZE-1)+SIZE, GL_UNSIGNED_INT, 0 );
-/*
+
         // normal shader
-        glUseProgram(norm_shaderID);
-        glUniformMatrix4fv(debug_matrix_id, 1, GL_FALSE, &MVP[0][0]);
-        glDrawElements( GL_TRIANGLE_STRIP, SIZE*2*(SIZE-1)+SIZE, GL_UNSIGNED_INT, 0 );
-*/
+        if (draw_norms) {
+            glUseProgram(norm_shaderID);
+            glUniformMatrix4fv(debug_matrix_id, 1, GL_FALSE, &MVP[0][0]);
+            glDrawElements( GL_TRIANGLE_STRIP, SIZE*2*(SIZE-1)+SIZE, GL_UNSIGNED_INT, 0 );
+        }
+
         // debug box
         glBindVertexArray(default_vao);
         glBindBuffer(GL_ARRAY_BUFFER, default_vbo);
