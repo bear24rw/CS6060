@@ -1,5 +1,27 @@
-all: main.cpp shader.cpp shader.h tile.cpp tile.h terrain.cpp terrain.h camera.cpp camera.h
-	g++ main.cpp shader.cpp tile.cpp terrain.cpp camera.cpp -g -o main -lGL -lGLU -lsfml-graphics
+TARGET = main
+LIBS = -lGL -lGLU -lsfml-graphics
+CC = g++
+CFLAGS = -g -Wall
+
+.PHONY: default all clean run
+
+default: $(TARGET)
+all: default
+
+OBJECTS = $(patsubst %.cpp, %.o, $(wildcard *.cpp))
+HEADERS = $(wildcard *.h)
+
+%.o: %.c $(HEADERS)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+.PRECIOUS: $(TARGET) $(OBJECTS)
+
+$(TARGET): $(OBJECTS)
+	$(CC) $(OBJECTS) -Wall $(LIBS) -o $@
+
+clean:
+	-rm -f *.o
+	-rm -f $(TARGET)
 
 run: all
 	./main

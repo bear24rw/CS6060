@@ -15,6 +15,7 @@
 #include "shader.h"
 #include "tile.h"
 #include "terrain.h"
+#include "skybox.h"
 
 #define SPEED (100.0f)
 
@@ -75,7 +76,6 @@ int main()
         50.0f , 0.0f , 0.0f  , 1.0f , 0.0f , 0.0f ,
     };
     */
-    printf("default_vbo: %d\n", default_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, default_vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(lines), lines, GL_STATIC_DRAW);
 
@@ -97,7 +97,8 @@ int main()
     GLint model_id = glGetUniformLocation(shader_id, "M");
 
     Camera cam;
-    Terrain terrain(&cam);
+    //Terrain terrain(&cam);
+    Skybox skybox(&cam);
 
     int mouse_pan = 0;
     int mouse_tilt = 0;
@@ -193,8 +194,8 @@ int main()
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         }
 
-        // tiles
-        terrain.render();
+        skybox.render();
+        //terrain.render();
 
         // normal shader
         /*
@@ -219,6 +220,7 @@ int main()
         glBindBuffer(GL_ARRAY_BUFFER, default_vbo);
         glUseProgram(shader_id);
         glUniformMatrix4fv(mvp_id, 1, GL_FALSE, glm::value_ptr(mvp));
+        glLineWidth(5);
         glDrawArrays(GL_LINES, 0, sizeof(lines)/sizeof(float)/6);
 
         // Swap buffers

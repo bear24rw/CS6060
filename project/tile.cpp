@@ -42,9 +42,16 @@ float Tile::get_height(int _x, int _z) {
     //return glm::simplex(glm::vec2(x,y)/50.0f)*3.9f;
     _x += (x * TILE_SIZE);
     _z += (z * TILE_SIZE);
-    return glm::simplex(glm::vec2(_x,_z)/50.0f)*2.0f +
-           fabs(glm::simplex(glm::vec2(_x,_z)/400.0f)*20.0f) +
-           glm::simplex(glm::vec2(_x,_z)/800.0f)*100.0f;
+
+    float height = 0.0f;
+
+    float a = glm::simplex(glm::vec2(_x,_z)/50.0f)*2.0f;
+    float b = glm::simplex(glm::vec2(_x,_z)/400.0f)*20.0f;
+    float c = glm::simplex(glm::vec2(_x,_z)/800.0f)*100.0f;
+    if (b < 0) b = 0.0f;
+    if (c < 0) c = 0.0f;
+
+    return a+b+c;
 
     //return fabs(glm::simplex(glm::vec2(x,y)/50.0f)*3.9f);
     //return 0;
