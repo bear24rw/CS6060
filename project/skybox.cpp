@@ -58,14 +58,14 @@ Skybox::Skybox(Camera *_cam)
     float s = 70.0f;
 
     float v[] = {
-        -1.0 , 1.0  , 1.0  ,
-        -1.0 , -1.0 , 1.0  ,
-        1.0  , -1.0 , 1.0  ,
-        1.0  , 1.0  , 1.0  ,
-        -1.0 , 1.0  , -1.0 ,
-        -1.0 , -1.0 , -1.0 ,
-        1.0  , -1.0 , -1.0 ,
-        1.0  , 1.0  , -1.0 ,
+        -1.0 ,  1.0 ,   1.0  ,
+        -1.0 ,  -1.0 ,  1.0  ,
+         1.0 ,  -1.0 ,  1.0  ,
+         1.0 ,  1.0 ,   1.0  ,
+        -1.0 ,  1.0 ,   -1.0 ,
+        -1.0 ,  -1.0 ,  -1.0 ,
+         1.0 ,  -1.0 ,  -1.0 ,
+         1.0 ,  1.0 ,   -1.0 ,
     };
 
     vertices.clear();
@@ -98,7 +98,6 @@ void Skybox::render()
 
     // center the model on the camera
     glm::mat4 model = glm::translate(glm::mat4(1.0f), cam->position);
-    //glm::mat4 model(1.0f);
     glm::mat4 mvp = cam->proj_mat() * cam->view_mat() * model;
     glUniformMatrix4fv(mvp_id, 1, GL_FALSE, glm::value_ptr(mvp));
 

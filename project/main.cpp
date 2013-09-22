@@ -97,7 +97,7 @@ int main()
     GLint model_id = glGetUniformLocation(shader_id, "M");
 
     Camera cam;
-    //Terrain terrain(&cam);
+    Terrain terrain(&cam);
     Skybox skybox(&cam);
 
     int mouse_pan = 0;
@@ -195,7 +195,7 @@ int main()
         }
 
         skybox.render();
-        //terrain.render();
+        terrain.render();
 
         // normal shader
         /*

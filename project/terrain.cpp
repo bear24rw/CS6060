@@ -26,11 +26,12 @@ Terrain::Terrain(Camera *_cam)
 
     for(int x=0; x<NUM_TILES; x++) {
         for(int z=0; z<NUM_TILES; z++) {
+            printf("Generating tile %d,%d\n", x, z);
             tiles[x][z] = Tile(shader_id, x, z);
         }
     }
 
-    texture.loadFromFile("test.png");
+    texture.loadFromFile("sand.png");
     sf::Texture::bind(&texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
