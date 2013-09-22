@@ -35,12 +35,12 @@ glm::vec3 cam_up(glm::cross(cam_right,cam_direction));
 glm::mat4 proj_matrix;
 
 float get_height(int x, int y) {
-    x -= SIZE/2.0f;
-    y -= SIZE/2.0f;
+    //x -= SIZE/2.0f;
+    //y -= SIZE/2.0f;
     //return ((x*x)+(y*y))/100.0f;
     //return glm::simplex(glm::vec2(x,y)/50.0f)*3.9f;
     return glm::simplex(glm::vec2(x,y)/50.0f)*5.0f +
-           fabs(glm::simplex(glm::vec2(x,y)/300.0f)*30.0f);
+           fabs(glm::simplex(glm::vec2(x,y)/300.0f)*8.0f);
     //return fabs(glm::simplex(glm::vec2(x,y)/50.0f)*3.9f);
     //return 0;
 }
@@ -115,7 +115,7 @@ int main()
     GLuint vbo;
     glGenBuffers( 1, &vbo );
 
-    float vertices[SIZE*SIZE*(3+3+3)];
+    float vertices[SIZE*SIZE*(3+3+3+2)];
     int offset = 0;
     for (int y=0; y<SIZE; y++) {
         for (int x=0; x<SIZE; x++) {
@@ -136,6 +136,9 @@ int main()
             vertices[offset++] = 1.0f;//x / SIZE;
             vertices[offset++] = 0.0f;//y / SIZE;
             vertices[offset++] = 0.0f;
+            // texture
+            vertices[offset++] = (float)(x%2);
+            vertices[offset++] = (float)((y+1)%2);
         }
     }
 
@@ -162,18 +165,43 @@ int main()
     glEnable(GL_PRIMITIVE_RESTART);
     glPrimitiveRestartIndex(SIZE*SIZE);
 
+    // terrain texture
+    /*
+    GLuint tex;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    */
+
+    sf::Texture t1;
+    t1.loadFromFile("sand.png");
+    sf::Texture::bind(&t1);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    //glGenerateMipmap(GL_TEXTURE_2D);
+    /*
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    // Black/white checkerboard
+    float pixels[] = {
+        0.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,   0.0f, 0.0f, 0.0f
+    };
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_FLOAT, pixels);
+*/
+
     GLint posAttrib;
     GLint norAttrib;
     GLint colAttrib;
+    GLint texAttrib;
 
     glBindVertexArray(default_vao);
     glBindBuffer(GL_ARRAY_BUFFER, default_vbo);
     printf("LOADING DEFAULT SHADER\n");
     GLuint default_shaderID = LoadShaders("default_vert.glsl",  "default_frag.glsl");
-    posAttrib = glGetAttribLocation( default_shaderID, "position_model" );
-    colAttrib = glGetAttribLocation( default_shaderID, "color" );
-    glEnableVertexAttribArray( posAttrib );
-    glEnableVertexAttribArray( colAttrib );
+    posAttrib = glGetAttribLocation(default_shaderID, "position_model");
+    colAttrib = glGetAttribLocation(default_shaderID, "color");
+    glEnableVertexAttribArray(posAttrib);
+    glEnableVertexAttribArray(colAttrib);
     glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 6*sizeof(float), 0);
     glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 6*sizeof(float), (void*)(3*sizeof(float)));
 
@@ -185,20 +213,23 @@ int main()
     norAttrib = glGetAttribLocation(norm_shaderID, "normal_model" );
     glEnableVertexAttribArray(posAttrib);
     glEnableVertexAttribArray(norAttrib);
-    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 9*sizeof( float ), 0 );
-    glVertexAttribPointer(norAttrib, 3, GL_FLOAT, GL_FALSE, 9*sizeof(float), (void*)(3*sizeof(float)));
+    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 11*sizeof( float ), 0 );
+    glVertexAttribPointer(norAttrib, 3, GL_FLOAT, GL_FALSE, 11*sizeof(float), (void*)(3*sizeof(float)));
 
     printf("LOADING LIGHTING SHADER\n");
     GLuint shaderID = LoadShaders("sphere_vert.glsl",  "sphere_frag.glsl");
-    posAttrib = glGetAttribLocation( shaderID, "position_model" );
-    norAttrib = glGetAttribLocation( shaderID, "normal_model" );
-    colAttrib = glGetAttribLocation( shaderID, "color" );
-    glEnableVertexAttribArray( posAttrib );
-    glEnableVertexAttribArray( norAttrib );
-    glEnableVertexAttribArray( colAttrib );
-    glVertexAttribPointer( posAttrib, 3, GL_FLOAT, GL_FALSE, 9*sizeof( float ), 0 );
-    glVertexAttribPointer( norAttrib, 3, GL_FLOAT, GL_FALSE, 9*sizeof(float), (void*)(3*sizeof(float)));
-    glVertexAttribPointer( colAttrib, 3, GL_FLOAT, GL_FALSE, 9*sizeof(float), (void*)(6*sizeof(float)));
+    posAttrib = glGetAttribLocation(shaderID, "position_model");
+    norAttrib = glGetAttribLocation(shaderID, "normal_model");
+    colAttrib = glGetAttribLocation(shaderID, "color");
+    texAttrib = glGetAttribLocation(shaderID, "texcoord");
+    glEnableVertexAttribArray(posAttrib);
+    glEnableVertexAttribArray(norAttrib);
+    glEnableVertexAttribArray(colAttrib);
+    glEnableVertexAttribArray(texAttrib);
+    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 11*sizeof( float ), 0 );
+    glVertexAttribPointer(norAttrib, 3, GL_FLOAT, GL_FALSE, 11*sizeof(float), (void*)(3*sizeof(float)));
+    glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 11*sizeof(float), (void*)(6*sizeof(float)));
+    glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 11*sizeof(float), (void*)(9*sizeof(float)));
 
     glUseProgram(default_shaderID);
     GLint default_matrix_id = glGetUniformLocation(default_shaderID, "MVP");

@@ -1,7 +1,11 @@
 #version 410
 
 in vec3 norm;
-out vec4 out_color;
+in vec2 Texcoord;
+
+out vec3 out_color;
+
+uniform sampler2D tex;
 
 struct SHC{
     vec3 L00, L1m1, L10, L11, L2m2, L2m1, L20, L21, L22;
@@ -68,7 +72,14 @@ vec3 sh_light(vec3 normal, SHC l){
     );
 }
 
+vec3 gamma(vec3 color){
+    return pow(color, vec3(1.0/2.0));
+}
+
 void main()
 {
-    out_color = vec4(sh_light(norm, beach)*0.5,1);
+    vec3 light = sh_light(norm, beach);
+    vec3 material_color = texture(tex, Texcoord).rgb;
+
+    out_color = gamma(material_color * light);
 }
