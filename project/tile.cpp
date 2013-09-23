@@ -34,7 +34,9 @@ Tile::Tile(GLuint shader_id, int x, int z)
 
     update_indices();
 
+    clear_to_update = true;
     ready_to_render = false;
+    reload_vbo = false;
 
     set_xz(x,z);
 }
@@ -51,9 +53,13 @@ int Tile::world_z() { return (tile_z * TILE_SIZE); }
 
 void Tile::update()
 {
+    if (clear_to_update == false)
+        printf("TRYING TO UPDATE TWICE\n");
+    clear_to_update = false;
     ready_to_render = false;
     update_vertices();
     ready_to_render = true;
+    clear_to_update = true;
 }
 
 float Tile::get_height(int x, int z) {
@@ -68,13 +74,16 @@ float Tile::get_height(int x, int z) {
 
     float height = 0.0f;
 
-    float a = glm::simplex(glm::vec2(x,z)/50.0f)*2.0f;
-    float b = glm::simplex(glm::vec2(x,z)/400.0f)*20.0f;
-    float c = glm::simplex(glm::vec2(x,z)/800.0f)*100.0f;
-    if (b < 0) b = 0.0f;
-    if (c < 0) c = 0.0f;
+    float a = glm::simplex(glm::vec2(x,z)/50.0f)*1.0f;
+    float b = glm::simplex(glm::vec2(x,z)/400.0f)*2.0f;
+    float c = glm::simplex(glm::vec2(x,z)/800.0f)*20.0f;
+    float d = abs(glm::simplex(glm::vec2(x,z)/600.0f)*200.0f);
+    //if (b < 0) b = 0.0f;
+    //if (c < 0) c = 0.0f;
+    //if (d < 0) d = 0.0f;
+    if (d > 180.0f) d = 180.0f;
 
-    return a+b+c;
+    return a+b+c+d;
 
     //return fabs(glm::simplex(glm::vec2(x,y)/50.0f)*3.9f);
     //return 0;
@@ -127,14 +136,15 @@ void Tile::update_vertices()
             vertices.push_back((float)((z+1)%2));
         }
     }
-    printf("Update took: %fs\n", clock.restart().asSeconds());
+    reload_vbo = true;
+    //printf("Update took: %fs\n", clock.restart().asSeconds());
 }
 
 void Tile::render()
 {
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(float), vertices.data(), GL_STATIC_DRAW);
+    if (reload_vbo) glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(float), vertices.data(), GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glDrawElements(GL_TRIANGLE_STRIP, elements.size(), GL_UNSIGNED_INT, 0);
 }

@@ -6,7 +6,9 @@
 #include "tile.h"
 #include "camera.h"
 
-#define NUM_TILES 5
+#define NUM_TILES_X 5
+#define NUM_TILES_Z 5
+#define NUM_TILES   (NUM_TILES_X*NUM_TILES_Z)
 
 class Terrain {
     public:
@@ -16,7 +18,7 @@ class Terrain {
         void update(void);
     private:
         //std::vector<Tile*> tiles;
-        Tile *tiles[NUM_TILES][NUM_TILES];
+        Tile *tiles[NUM_TILES];
         GLuint shader_id;
         GLuint mvp_id;
         GLuint view_id;

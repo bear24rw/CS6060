@@ -1,3 +1,4 @@
+#include <queue>
 #include <GL/glew.h>
 #include <SFML/Graphics.hpp>
 #include <SFML/OpenGL.hpp>
@@ -25,10 +26,11 @@ Terrain::Terrain(Camera *_cam)
     view_id = glGetUniformLocation(shader_id, "V");
     model_id = glGetUniformLocation(shader_id, "M");
 
-    for(int x=0; x<NUM_TILES; x++) {
-        for(int z=0; z<NUM_TILES; z++) {
+    for(int x=0; x<NUM_TILES_X; x++) {
+        for(int z=0; z<NUM_TILES_Z; z++) {
+            printf("Generating [%d/%d]\n", x*NUM_TILES_X+z, NUM_TILES);
             Tile *t = new Tile(shader_id, x, z);
-            tiles[x][z] = t;
+            tiles[x*NUM_TILES_X+z] = t;
         }
     }
 
@@ -48,78 +50,61 @@ void Terrain::update()
     int cam_x = cam->position.x / TILE_SIZE;
     int cam_z = cam->position.z / TILE_SIZE;
 
-    int dist;
+    // grid centered around player, assumed to be empty
+    int slots[NUM_TILES_X][NUM_TILES_Z];
+    memset(slots, -1, sizeof(slots));
 
-    for(int z=0; z<NUM_TILES; z++) {
-        for(int x=0; x<NUM_TILES; x++) {
+    std::queue<int> free;
 
-            dist = cam_z - tiles[x][z]->tile_z;
-
-            if (abs(dist) > NUM_TILES-padding) {
-
-                int furthest = tiles[x][z]->tile_z;
-
-                if (dist > 0) {
-                    // we are moving z+
-                    // find most furthest north tile in this row
-                    for(int zz=0; zz<NUM_TILES; zz++) {
-                        if (tiles[x][zz]->tile_z > furthest)
-                            furthest = tiles[x][zz]->tile_z;
-                    }
-
-                    // reassing current tile to 1 past furthest
-                    printf("Reassinging: (%d,%d) -> (%d,%d)\n", x,z,x,furthest+1);
-                    tiles[x][z]->set_xz(x, furthest+1);
-                } else {
-                    // we are moving z-
-                    // find most furthest south tile in this row
-                    for(int zz=0; zz<NUM_TILES; zz++) {
-                        if (tiles[x][zz]->tile_z < furthest)
-                            furthest = tiles[x][zz]->tile_z;
-                    }
-
-                    // reassing current tile to 1 past furthest
-                    printf("Reassinging: (%d,%d) -> (%d,%d)\n", x,z,x,furthest-1);
-                    tiles[x][z]->set_xz(x, furthest-1);
-                }
-            }
-
-
-            dist = cam_x - tiles[x][z]->tile_x;
-
-            if (abs(dist) > NUM_TILES-padding) {
-
-                int furthest = tiles[x][z]->tile_x;
-
-                if (dist > 0) {
-                    // we are moving z+
-                    // find most furthest north tile in this row
-                    for(int xx=0; xx<NUM_TILES; xx++) {
-                        if (tiles[xx][z]->tile_x > furthest)
-                            furthest = tiles[xx][z]->tile_x;
-                    }
-
-                    // reassing current tile to 1 past furthest
-                    printf("Reassinging: (%d,%d) -> (%d,%d)\n", x,z,furthest+1,z);
-                    tiles[x][z]->set_xz(furthest+1, z);
-                } else {
-                    // we are moving z-
-                    // find most furthest south tile in this row
-                    for(int xx=0; xx<NUM_TILES; xx++) {
-                        if (tiles[xx][z]->tile_x < furthest)
-                            furthest = tiles[xx][z]->tile_x;
-                    }
-
-                    // reassing current tile to 1 past furthest
-                    printf("Reassinging: (%d,%d) -> (%d,%d)\n", x,z,furthest-1,z);
-                    tiles[x][z]->set_xz(furthest-1, z);
-                }
-            }
-
+    // fill out grid and keep track of free'd tiles
+    for(int i=0; i<NUM_TILES; i++) {
+        int tx = tiles[i]->tile_x;
+        int tz = tiles[i]->tile_z;
+        int dist_x = tx - cam_x;
+        int dist_z = tz - cam_z;
+        if (abs(dist_x) > NUM_TILES_X/2 || abs(dist_z) > NUM_TILES_Z/2) {
+            //printf("Tile %d at (%d,%d) is (%d,%d) from cam (%d,%d)\n", i, tx, tz, dist_x, dist_z, cam_x, cam_z);
+            free.push(i);
+        } else {
+            // the camera is at the center of 'slots' so add the distance to the center
+            slots[dist_x+(NUM_TILES_X/2)][dist_z+(NUM_TILES_Z/2)] = i;
         }
     }
 
-    printf("%fs\n", clock.restart().asSeconds());
+    /*
+    for(int z=0; z<NUM_TILES_Z; z++) {
+        for(int x=0; x<NUM_TILES_X; x++) {
+            if (slots[x][NUM_TILES_Z-z-1] > -1)
+                printf("1");
+            else
+                printf("0");
+        }
+        printf("\n");
+    }
+    */
+
+    // loop through grid and try to fill empty slots with free tiles
+    for(int x=0; x<NUM_TILES_X; x++) {
+        for(int z=0; z<NUM_TILES_Z; z++) {
+            // if slot is filled continue
+            if (slots[x][z] > -1) continue;
+
+            if (free.empty()) {
+                //printf("Not enough free tiles to fill all slots!\n");
+                break;
+            }
+
+            int new_x = cam_x + (x - NUM_TILES_X/2);
+            int new_z = cam_z + (z - NUM_TILES_Z/2);
+            //printf("Setting %d to (%d,%d)\n", free.front(), new_x, new_z);
+            tiles[free.front()]->set_xz(new_x,new_z);
+            free.pop();
+        }
+    }
+
+    if (free.empty() == false) printf("Too many free tiles!\n");
+
+    //printf("%fs\n", clock.restart().asSeconds());
 
 }
 
@@ -129,25 +114,23 @@ void Terrain::render()
     glUseProgram(shader_id);
     sf::Texture::bind(&texture);
 
-    for(int x=0; x<NUM_TILES; x++) {
-        for(int z=0; z<NUM_TILES; z++) {
-            if (tiles[x][z]->ready_to_render == false) {
-                //printf("Tile %d %d not ready to render, skipping..\n");
-                continue;
-            }
-            // absolute world position of this tile
-            glm::vec3 wp(tiles[x][z]->world_x(), 0, tiles[x][z]->world_z());
-            // move the model matrix to that position
-            glm::mat4 model = glm::translate(glm::mat4(1.0f), wp);
-            //glm::mat4 model(1.0f);
-            // update the mvp matrix
-            glm::mat4 mvp = cam->proj_mat() * cam->view_mat() * model;
-            glUniformMatrix4fv(mvp_id, 1, GL_FALSE, glm::value_ptr(mvp));
-            glUniformMatrix4fv(model_id, 1, GL_FALSE, glm::value_ptr(model));
-            glUniformMatrix4fv(view_id, 1, GL_FALSE, glm::value_ptr(cam->view_mat()));
-            // render it
-            tiles[x][z]->render();
+    for(int i=0; i<NUM_TILES; i++) {
+        if (tiles[i]->ready_to_render == false) {
+            //printf("Tile %d %d not ready to render, skipping..\n");
+            continue;
         }
+        // absolute world position of this tile
+        glm::vec3 wp(tiles[i]->world_x(), 0, tiles[i]->world_z());
+        // move the model matrix to that position
+        glm::mat4 model = glm::translate(glm::mat4(1.0f), wp);
+        //glm::mat4 model(1.0f);
+        // update the mvp matrix
+        glm::mat4 mvp = cam->proj_mat() * cam->view_mat() * model;
+        glUniformMatrix4fv(mvp_id, 1, GL_FALSE, glm::value_ptr(mvp));
+        glUniformMatrix4fv(model_id, 1, GL_FALSE, glm::value_ptr(model));
+        glUniformMatrix4fv(view_id, 1, GL_FALSE, glm::value_ptr(cam->view_mat()));
+        // render it
+        tiles[i]->render();
     }
 
 

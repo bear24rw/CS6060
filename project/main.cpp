@@ -112,10 +112,16 @@ int main()
     bool key_s = false;
     bool key_w = false;
     bool key_d = false;
+    bool key_up = false;
+    bool key_down = false;
 
     sf::Clock clock;
+    sf::Clock fps_counter;
     while ( window.isOpen() )
     {
+        //float fps = 1.0f / fps_counter.restart().asSeconds();
+        //printf("fps: %f\n", fps);
+
         sf::Time delta = clock.restart();
 
         // Process events
@@ -144,8 +150,10 @@ int main()
                         key_d = true;
                         break;
                     case sf::Keyboard::PageUp:
+                        key_up = true;
                         break;
                     case sf::Keyboard::PageDown:
+                        key_down = true;
                         break;
                     case sf::Keyboard::P:
                         draw_polys = !draw_polys;
@@ -172,8 +180,10 @@ int main()
                         key_d = false;
                         break;
                     case sf::Keyboard::PageUp:
+                        key_up = false;
                         break;
                     case sf::Keyboard::PageDown:
+                        key_down = false;
                         break;
                 }
             } else if (event.type == sf::Event::MouseWheelMoved) {
@@ -210,6 +220,8 @@ int main()
         if (key_s) cam.translate(-cam.direction * delta.asSeconds() * SPEED);
         if (key_a) cam.translate(-cam.right * delta.asSeconds() * SPEED);
         if (key_d) cam.translate(cam.right * delta.asSeconds() * SPEED);
+        if (key_up) cam.translate(cam.up * delta.asSeconds() * SPEED);
+        if (key_down) cam.translate(-cam.up * delta.asSeconds() * SPEED);
 
         terrain.update();
 

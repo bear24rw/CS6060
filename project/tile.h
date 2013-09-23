@@ -5,7 +5,7 @@
 #include <SFML/System.hpp>
 #include <vector>
 
-#define TILE_SIZE 200
+#define TILE_SIZE 100
 
 // each row
 // number of rows
@@ -26,6 +26,7 @@ class Tile {
         int world_x(void);
         int world_z(void);
         bool ready_to_render;
+        bool clear_to_update;
         int tile_x;
         int tile_z;
     private:
@@ -35,6 +36,7 @@ class Tile {
         GLuint vao;
         GLuint vbo;
         GLuint ebo;
+        bool reload_vbo;
         sf::Thread update_thread;
         void update();
 };
