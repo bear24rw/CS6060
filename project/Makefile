@@ -1,7 +1,7 @@
 TARGET = main
-LIBS = -lGL -lGLU -lsfml-graphics
+LIBS = -lGL -lGLU -lsfml-graphics -lsfml-system
 CC = g++
-CFLAGS = -g -Wall
+CFLAGS = -O3 -Wall
 
 .PHONY: default all clean run
 
@@ -14,9 +14,9 @@ HEADERS = $(wildcard *.h)
 %.o: %.c $(HEADERS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-.PRECIOUS: $(TARGET) $(OBJECTS)
+#.PRECIOUS: $(TARGET) $(OBJECTS)
 
-$(TARGET): $(OBJECTS)
+$(TARGET): $(OBJECTS) $(HEADERS)
 	$(CC) $(OBJECTS) -Wall $(LIBS) -o $@
 
 clean:

@@ -6,15 +6,17 @@
 #include "tile.h"
 #include "camera.h"
 
-#define NUM_TILES 20
+#define NUM_TILES 5
 
 class Terrain {
     public:
         Terrain();
         Terrain(Camera*);
         void render(void);
+        void update(void);
     private:
-        Tile tiles[NUM_TILES][NUM_TILES];
+        //std::vector<Tile*> tiles;
+        Tile *tiles[NUM_TILES][NUM_TILES];
         GLuint shader_id;
         GLuint mvp_id;
         GLuint view_id;

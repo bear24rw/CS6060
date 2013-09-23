@@ -81,6 +81,6 @@ void main()
     vec3 light = sh_light(norm, beach);
     vec3 material_color = texture(tex, Texcoord).rgb;
 
-    //out_color = gamma(material_color * light);
-    out_color = material_color * light;
+    out_color = gamma(material_color * light);
+    //out_color = material_color * light;
 }

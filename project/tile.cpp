@@ -1,18 +1,19 @@
 #include <GL/glew.h>
 #include <SFML/Graphics.hpp>
 #include <SFML/OpenGL.hpp>
+#include <SFML/System.hpp>
 #include <glm/gtc/noise.hpp>
 #include <vector>
 
 #include "tile.h"
 
-Tile::Tile() {}
+Tile::Tile()
+: update_thread(&Tile::update, this)
+{ }
 
-Tile::Tile(GLuint shader_id, int _x, int _z)
+Tile::Tile(GLuint shader_id, int x, int z)
+: update_thread(&Tile::update, this)
 {
-    x = _x;
-    z = _z;
-
     glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
     glGenBuffers(1, &ebo);
@@ -31,23 +32,45 @@ Tile::Tile(GLuint shader_id, int _x, int _z)
     glVertexAttribPointer(norAttrib, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(3*sizeof(float)));
     glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(6*sizeof(float)));
 
-    update_vertices();
     update_indices();
+
+    ready_to_render = false;
+
+    set_xz(x,z);
 }
 
-float Tile::get_height(int _x, int _z) {
+void Tile::set_xz(int x, int z)
+{
+    tile_x = x;
+    tile_z = z;
+    update_thread.launch();
+}
+
+int Tile::world_x() { return (tile_x * TILE_SIZE); }
+int Tile::world_z() { return (tile_z * TILE_SIZE); }
+
+void Tile::update()
+{
+    ready_to_render = false;
+    update_vertices();
+    ready_to_render = true;
+}
+
+float Tile::get_height(int x, int z) {
     //x -= SIZE/2.0f;
     //y -= SIZE/2.0f;
     //return ((x*x)+(y*y))/100.0f;
     //return glm::simplex(glm::vec2(x,y)/50.0f)*3.9f;
-    _x += (x * TILE_SIZE);
-    _z += (z * TILE_SIZE);
+
+    // translate coordinates into world coordinates
+    x += world_x();
+    z += world_z();
 
     float height = 0.0f;
 
-    float a = glm::simplex(glm::vec2(_x,_z)/50.0f)*2.0f;
-    float b = glm::simplex(glm::vec2(_x,_z)/400.0f)*20.0f;
-    float c = glm::simplex(glm::vec2(_x,_z)/800.0f)*100.0f;
+    float a = glm::simplex(glm::vec2(x,z)/50.0f)*2.0f;
+    float b = glm::simplex(glm::vec2(x,z)/400.0f)*20.0f;
+    float c = glm::simplex(glm::vec2(x,z)/800.0f)*100.0f;
     if (b < 0) b = 0.0f;
     if (c < 0) c = 0.0f;
 
@@ -78,6 +101,9 @@ void Tile::update_indices()
 
 void Tile::update_vertices()
 {
+    sf::Clock clock;
+    clock.restart();
+
     vertices.clear();
 
     int offset = 0;
@@ -101,15 +127,15 @@ void Tile::update_vertices()
             vertices.push_back((float)((z+1)%2));
         }
     }
-
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(float), vertices.data(), GL_STATIC_DRAW);
+    printf("Update took: %fs\n", clock.restart().asSeconds());
 }
 
 void Tile::render()
 {
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(float), vertices.data(), GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glDrawElements(GL_TRIANGLE_STRIP, elements.size(), GL_UNSIGNED_INT, 0);
 }
 

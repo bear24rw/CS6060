@@ -17,7 +17,7 @@
 #include "terrain.h"
 #include "skybox.h"
 
-#define SPEED (100.0f)
+#define SPEED (50.0f)
 
 int main()
 {
@@ -108,6 +108,11 @@ int main()
     int draw_polys = 0;
     int draw_norms = 0;
 
+    bool key_a = false;
+    bool key_s = false;
+    bool key_w = false;
+    bool key_d = false;
+
     sf::Clock clock;
     while ( window.isOpen() )
     {
@@ -127,28 +132,48 @@ int main()
                         window.close();
                         break;
                     case sf::Keyboard::W:
-                        cam.translate(cam.direction * delta.asSeconds() * SPEED);
+                        key_w = true;
                         break;
                     case sf::Keyboard::S:
-                        cam.translate(-cam.direction * delta.asSeconds() * SPEED);
+                        key_s = true;
                         break;
                     case sf::Keyboard::A:
-                        cam.translate(-cam.right * delta.asSeconds() * SPEED);
+                        key_a = true;
                         break;
                     case sf::Keyboard::D:
-                        cam.translate(cam.right * delta.asSeconds() * SPEED);
+                        key_d = true;
                         break;
                     case sf::Keyboard::PageUp:
-                        cam.translate(cam.up * delta.asSeconds() * SPEED);
                         break;
                     case sf::Keyboard::PageDown:
-                        cam.translate(-cam.up * delta.asSeconds() * SPEED);
                         break;
                     case sf::Keyboard::P:
                         draw_polys = !draw_polys;
                         break;
                     case sf::Keyboard::N:
                         draw_norms = !draw_norms;
+                        break;
+                }
+            } else if (event.type == sf::Event::KeyReleased) {
+                switch(event.key.code) {
+                    case sf::Keyboard::Escape:
+                        window.close();
+                        break;
+                    case sf::Keyboard::W:
+                        key_w = false;
+                        break;
+                    case sf::Keyboard::S:
+                        key_s = false;
+                        break;
+                    case sf::Keyboard::A:
+                        key_a = false;
+                        break;
+                    case sf::Keyboard::D:
+                        key_d = false;
+                        break;
+                    case sf::Keyboard::PageUp:
+                        break;
+                    case sf::Keyboard::PageDown:
                         break;
                 }
             } else if (event.type == sf::Event::MouseWheelMoved) {
@@ -180,6 +205,13 @@ int main()
             }
 
         }
+
+        if (key_w) cam.translate(cam.direction * delta.asSeconds() * SPEED);
+        if (key_s) cam.translate(-cam.direction * delta.asSeconds() * SPEED);
+        if (key_a) cam.translate(-cam.right * delta.asSeconds() * SPEED);
+        if (key_d) cam.translate(cam.right * delta.asSeconds() * SPEED);
+
+        terrain.update();
 
         // clear the screen to black
         glClearColor(0.5, 0.5, 0.5, 0.0);
