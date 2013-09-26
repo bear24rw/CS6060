@@ -21,14 +21,13 @@ class Tile {
         void update_vertices(void);
         void update_indices(void);
         void render(void);
-        float get_height(int,int);
         void set_xz(int,int);
         int world_x(void);
         int world_z(void);
-        bool ready_to_render;
-        bool clear_to_update;
+        bool needs_rebuild;
         int tile_x;
         int tile_z;
+        float height[TILE_SIZE+1][TILE_SIZE+1];
     private:
         int num_elements;
         std::vector<GLuint> elements;
@@ -37,6 +36,6 @@ class Tile {
         GLuint vbo;
         GLuint ebo;
         bool reload_vbo;
-        sf::Thread update_thread;
         void update();
+        sf::Mutex vbo_mutex;
 };

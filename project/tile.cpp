@@ -1,18 +1,17 @@
+#include <vector>
+#include <algorithm>
 #include <GL/glew.h>
 #include <SFML/Graphics.hpp>
 #include <SFML/OpenGL.hpp>
 #include <SFML/System.hpp>
 #include <glm/gtc/noise.hpp>
-#include <vector>
 
 #include "tile.h"
 
 Tile::Tile()
-: update_thread(&Tile::update, this)
 { }
 
 Tile::Tile(GLuint shader_id, int x, int z)
-: update_thread(&Tile::update, this)
 {
     glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
@@ -34,9 +33,8 @@ Tile::Tile(GLuint shader_id, int x, int z)
 
     update_indices();
 
-    clear_to_update = true;
-    ready_to_render = false;
     reload_vbo = false;
+    needs_rebuild = true;
 
     set_xz(x,z);
 }
@@ -45,49 +43,12 @@ void Tile::set_xz(int x, int z)
 {
     tile_x = x;
     tile_z = z;
-    update_thread.launch();
+    needs_rebuild = true;
 }
 
 int Tile::world_x() { return (tile_x * TILE_SIZE); }
 int Tile::world_z() { return (tile_z * TILE_SIZE); }
 
-void Tile::update()
-{
-    if (clear_to_update == false)
-        printf("TRYING TO UPDATE TWICE\n");
-    clear_to_update = false;
-    ready_to_render = false;
-    update_vertices();
-    ready_to_render = true;
-    clear_to_update = true;
-}
-
-float Tile::get_height(int x, int z) {
-    //x -= SIZE/2.0f;
-    //y -= SIZE/2.0f;
-    //return ((x*x)+(y*y))/100.0f;
-    //return glm::simplex(glm::vec2(x,y)/50.0f)*3.9f;
-
-    // translate coordinates into world coordinates
-    x += world_x();
-    z += world_z();
-
-    float height = 0.0f;
-
-    float a = glm::simplex(glm::vec2(x,z)/50.0f)*1.0f;
-    float b = glm::simplex(glm::vec2(x,z)/400.0f)*2.0f;
-    float c = glm::simplex(glm::vec2(x,z)/800.0f)*20.0f;
-    float d = abs(glm::simplex(glm::vec2(x,z)/600.0f)*200.0f);
-    //if (b < 0) b = 0.0f;
-    //if (c < 0) c = 0.0f;
-    //if (d < 0) d = 0.0f;
-    if (d > 180.0f) d = 180.0f;
-
-    return a+b+c+d;
-
-    //return fabs(glm::simplex(glm::vec2(x,y)/50.0f)*3.9f);
-    //return 0;
-}
 
 void Tile::update_indices()
 {
@@ -113,6 +74,7 @@ void Tile::update_vertices()
     sf::Clock clock;
     clock.restart();
 
+    vbo_mutex.lock();
     vertices.clear();
 
     int offset = 0;
@@ -120,13 +82,13 @@ void Tile::update_vertices()
         for (int x=0; x<=TILE_SIZE; x++) {
             //position
             vertices.push_back(x);
-            vertices.push_back(get_height(x,z));
+            vertices.push_back(height[x][z]);
             vertices.push_back(z);
             // normal
-            float l = get_height(x-1,z);
-            float r = get_height(x+1,z);
-            float d = get_height(x,z-1);
-            float u = get_height(x,z+1);
+            float l = height[std::max(0, x-1)][z];
+            float r = height[std::min(TILE_SIZE, x+1)][z];
+            float d = height[x][std::max(0, z-1)];
+            float u = height[x][std::min(TILE_SIZE, z+1)];
             glm::vec3 n = glm::normalize(glm::vec3(l-r, 2.0, d-u));
             vertices.push_back(n.x);
             vertices.push_back(n.y);
@@ -137,6 +99,7 @@ void Tile::update_vertices()
         }
     }
     reload_vbo = true;
+    vbo_mutex.unlock();
     //printf("Update took: %fs\n", clock.restart().asSeconds());
 }
 
@@ -144,7 +107,12 @@ void Tile::render()
 {
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    if (reload_vbo) glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(float), vertices.data(), GL_STATIC_DRAW);
+    vbo_mutex.lock();
+    if (reload_vbo) {
+        glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(float), vertices.data(), GL_STATIC_DRAW);
+        reload_vbo = false;
+    }
+    vbo_mutex.unlock();
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glDrawElements(GL_TRIANGLE_STRIP, elements.size(), GL_UNSIGNED_INT, 0);
 }

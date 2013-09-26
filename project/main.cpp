@@ -223,8 +223,6 @@ int main()
         if (key_up) cam.translate(cam.up * delta.asSeconds() * SPEED);
         if (key_down) cam.translate(-cam.up * delta.asSeconds() * SPEED);
 
-        terrain.update();
-
         // clear the screen to black
         glClearColor(0.5, 0.5, 0.5, 0.0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
