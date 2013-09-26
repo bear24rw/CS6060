@@ -46,16 +46,24 @@ Terrain::Terrain(Camera *_cam)
 }
 
 float Terrain::get_height(int x, int z) {
-    float a = fabs(glm::simplex(glm::vec2(x,z)/280.0f)*10.0f);
-    float b = glm::simplex(glm::vec2(x,z)/410.0f)*0.09f;
-    float c = glm::simplex(glm::vec2(x,z)/809.0f)*3.0f;
-    float d = fabs(glm::simplex(glm::vec2(x,z)/600.0f)*30.0f);
+    //float a = fabs(glm::simplex(glm::vec2(x,z)/280.0f)*10.0f);
+    //float b = glm::simplex(glm::vec2(x,z)/410.0f)*0.09f;
+    //float c = glm::simplex(glm::vec2(x,z)/809.0f)*3.0f;
+    //float d = fabs(glm::simplex(glm::vec2(x,z)/600.0f)*30.0f);
     //if (b < 0) b = 0.0f;
     //if (c < 0) c = 0.0f;
     //if (d < 0) d = 0.0f;
     //if (d > 180.0f) d = 180.0f;
+    //return a+b+c+d;
 
-    return a+b+c+d;
+    float a = glm::simplex(glm::vec2(x,z)/100.0f)*3.0f;
+    float b = glm::simplex(glm::vec2(x,z)/300.0f)*60.0f;
+    float c = glm::simplex(glm::vec2(x,z)/500.0f);
+
+    if (c>0)
+        return a;
+    else
+        return a+fabs(b);
     //return a;
     //return 5;
 
