@@ -7,8 +7,8 @@
 #include "tile.h"
 #include "camera.h"
 
-#define NUM_TILES_X 7
-#define NUM_TILES_Z 7
+#define NUM_TILES_X 9
+#define NUM_TILES_Z 9
 #define NUM_TILES   (NUM_TILES_X*NUM_TILES_Z)
 
 class Terrain {

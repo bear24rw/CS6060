@@ -55,8 +55,8 @@ float Terrain::get_height(int x, int z) {
     //if (d < 0) d = 0.0f;
     //if (d > 180.0f) d = 180.0f;
 
-    //return a+b+c+d;
-    return a;
+    return a+b+c+d;
+    //return a;
     //return 5;
 
     //return fabs(glm::simplex(glm::vec2(x,y)/50.0f)*3.9f);
@@ -108,6 +108,11 @@ void Terrain::update()
             } else {
                 // the camera is at the center of 'slots' so add the distance to the center
                 slots[dist_x+(NUM_TILES_X/2)][dist_z+(NUM_TILES_Z/2)] = i;
+                if (abs(dist_x) > 0 || abs(dist_z) > 0) { tiles[i]->lod(0); tiles[i]->needs_rebuild = true; }
+                if (abs(dist_x) > 1 || abs(dist_z) > 1) { tiles[i]->lod(1); tiles[i]->needs_rebuild = true; }
+                if (abs(dist_x) > 2 || abs(dist_z) > 2) { tiles[i]->lod(2); tiles[i]->needs_rebuild = true; }
+                if (abs(dist_x) > 3 || abs(dist_z) > 3) { tiles[i]->lod(3); tiles[i]->needs_rebuild = true; }
+                if (abs(dist_x) > 4 || abs(dist_z) > 4) { tiles[i]->lod(4); tiles[i]->needs_rebuild = true; }
             }
         }
 
@@ -134,8 +139,13 @@ void Terrain::update()
 
         // loop through all tiles and see if they need to be rebuilt
         for(int i=0; i<NUM_TILES; i++) {
-            if (tiles[i]->needs_rebuild == false) continue;
-            printf("Rebuilding tile %d\n", i);
+            if (tiles[i]->needs_rebuild) {
+                tiles[i]->update_vertices();
+                tiles[i]->update_indices();
+                tiles[i]->needs_rebuild = false;
+            }
+            if (tiles[i]->needs_gen == false) continue;
+            printf("Re-generating tile %d\n", i);
 
             // update the heightmap
             for(int x=0; x<=TILE_SIZE; x++) {
@@ -148,7 +158,7 @@ void Terrain::update()
 
             // update the vertices
             tiles[i]->update_vertices();
-            tiles[i]->needs_rebuild = false;
+            tiles[i]->needs_gen = false;
         }
 
         //printf("%fs\n", clock.restart().asSeconds());

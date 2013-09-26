@@ -24,26 +24,44 @@ Tile::Tile(GLuint shader_id, int x, int z)
     GLuint posAttrib = glGetAttribLocation(shader_id, "position_model");
     GLuint norAttrib = glGetAttribLocation(shader_id, "normal_model");
     GLuint texAttrib = glGetAttribLocation(shader_id, "texcoord");
+    GLuint colAttrib = glGetAttribLocation(shader_id, "color");
     glEnableVertexAttribArray(posAttrib);
     glEnableVertexAttribArray(norAttrib);
     glEnableVertexAttribArray(texAttrib);
-    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), 0 );
-    glVertexAttribPointer(norAttrib, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(3*sizeof(float)));
-    glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(6*sizeof(float)));
+    glEnableVertexAttribArray(colAttrib);
+    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 11*sizeof(float), 0 );
+    glVertexAttribPointer(norAttrib, 3, GL_FLOAT, GL_FALSE, 11*sizeof(float), (void*)(3*sizeof(float)));
+    glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 11*sizeof(float), (void*)(6*sizeof(float)));
+    glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 11*sizeof(float), (void*)(8*sizeof(float)));
 
-    update_indices();
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glEnable(GL_PRIMITIVE_RESTART);
+    glPrimitiveRestartIndex((TILE_SIZE+1)*(TILE_SIZE+1)+TILE_SIZE);
 
     reload_vbo = false;
-    needs_rebuild = true;
+    reload_ebo = false;
+    needs_rebuild = false;
+    needs_gen = true;
 
+    lod(0);
     set_xz(x,z);
+    update_vertices();
+    update_indices();
 }
+
+void Tile::lod(int l)
+{
+    _lod = l;
+    lod_step = pow(2, _lod);
+}
+
+int Tile::lod(void) {return _lod;}
 
 void Tile::set_xz(int x, int z)
 {
     tile_x = x;
     tile_z = z;
-    needs_rebuild = true;
+    needs_gen = true;
 }
 
 int Tile::world_x() { return (tile_x * TILE_SIZE); }
@@ -52,21 +70,22 @@ int Tile::world_z() { return (tile_z * TILE_SIZE); }
 
 void Tile::update_indices()
 {
+    ebo_mutex.lock();
     elements.clear();
 
-    for (int z=0; z<=TILE_SIZE-1; z++) {
-        for (int x=0; x<=TILE_SIZE; x++) {
-            elements.push_back(x+z*(TILE_SIZE+1));
-            elements.push_back((x+z*(TILE_SIZE+1)) + (TILE_SIZE+1));
+    int verts_per_side = TILE_SIZE/lod_step + 1;
+
+    for (int z=0; z<verts_per_side-1; z++) {
+        for (int x=0; x<verts_per_side; x++) {
+            elements.push_back(x+z*verts_per_side);
+            elements.push_back((x+z*verts_per_side) + verts_per_side);
         }
         // restart value
         elements.push_back((TILE_SIZE+1)*(TILE_SIZE+1)+TILE_SIZE);
     }
+    reload_ebo = true;
+    ebo_mutex.unlock();
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, elements.size()*sizeof(GLuint), elements.data(), GL_STATIC_DRAW);
-    glEnable(GL_PRIMITIVE_RESTART);
-    glPrimitiveRestartIndex((TILE_SIZE+1)*(TILE_SIZE+1)+TILE_SIZE);
 }
 
 void Tile::update_vertices()
@@ -74,12 +93,20 @@ void Tile::update_vertices()
     sf::Clock clock;
     clock.restart();
 
+    float lod_color[5][3] = {
+        {1.0f, 0.8f, 0.8f},     // 1 - red
+        {0.8f, 1.0f, 0.8f},     // 2 - green
+        {0.8f, 0.8f, 1.0f},     // 4 - blue
+        {1.0f, 0.8f, 1.0f},     // 8 - purple
+        {1.0f, 1.0f, 0.8f},     // 16 - yellow
+    };
+
     vbo_mutex.lock();
     vertices.clear();
 
     int offset = 0;
-    for (int z=0; z<=TILE_SIZE; z++) {
-        for (int x=0; x<=TILE_SIZE; x++) {
+    for (int z=0; z<=TILE_SIZE; z += lod_step) {
+        for (int x=0; x<=TILE_SIZE; x += lod_step) {
             //position
             vertices.push_back(x);
             vertices.push_back(height[x][z]);
@@ -96,6 +123,10 @@ void Tile::update_vertices()
             // texture
             vertices.push_back((float)(x%2));
             vertices.push_back((float)((z+1)%2));
+            // color
+            vertices.push_back(lod_color[_lod][0]);
+            vertices.push_back(lod_color[_lod][1]);
+            vertices.push_back(lod_color[_lod][2]);
         }
     }
     reload_vbo = true;
@@ -114,6 +145,12 @@ void Tile::render()
     }
     vbo_mutex.unlock();
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    ebo_mutex.lock();
+    if (reload_ebo) {
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, elements.size()*sizeof(GLuint), elements.data(), GL_STATIC_DRAW);
+        reload_ebo = false;
+    }
+    ebo_mutex.unlock();
     glDrawElements(GL_TRIANGLE_STRIP, elements.size(), GL_UNSIGNED_INT, 0);
 }
 

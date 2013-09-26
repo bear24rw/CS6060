@@ -5,7 +5,7 @@
 #include <SFML/System.hpp>
 #include <vector>
 
-#define TILE_SIZE 100
+#define TILE_SIZE 128
 
 // each row
 // number of rows
@@ -25,10 +25,15 @@ class Tile {
         int world_x(void);
         int world_z(void);
         bool needs_rebuild;
+        bool needs_gen;
         int tile_x;
         int tile_z;
         float height[TILE_SIZE+1][TILE_SIZE+1];
+        void lod(int);
+        int lod(void);
     private:
+        int _lod;
+        int lod_step;
         int num_elements;
         std::vector<GLuint> elements;
         std::vector<float> vertices;
@@ -36,6 +41,8 @@ class Tile {
         GLuint vbo;
         GLuint ebo;
         bool reload_vbo;
-        void update();
+        bool reload_ebo;
         sf::Mutex vbo_mutex;
+        sf::Mutex ebo_mutex;
+        void update();
 };
