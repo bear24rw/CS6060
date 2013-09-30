@@ -45,7 +45,9 @@ Terrain::Terrain(Camera *_cam)
     update_thread.launch();
 }
 
-float Terrain::get_height(int x, int z) {
+float Terrain::get_height(int x, int z) { return get_height((float)x, (float)z); }
+
+float Terrain::get_height(float x, float z) {
     //float a = fabs(glm::simplex(glm::vec2(x,z)/280.0f)*10.0f);
     //float b = glm::simplex(glm::vec2(x,z)/410.0f)*0.09f;
     //float c = glm::simplex(glm::vec2(x,z)/809.0f)*3.0f;
@@ -85,10 +87,11 @@ void Terrain::update()
 
         int cam_x = cam->position.x / TILE_SIZE;
         int cam_z = cam->position.z / TILE_SIZE;
+        printf("%d\n", cam_x);
 
         // if we haven't moved sleep and try again later
         if (cam_x == last_cam_x && cam_z == last_cam_z) {
-            sf::sleep(sf::milliseconds(100));
+            sf::sleep(sf::milliseconds(10));
             continue;
         }
 
@@ -138,6 +141,7 @@ void Terrain::update()
                 int new_x = cam_x + (x - NUM_TILES_X/2);
                 int new_z = cam_z + (z - NUM_TILES_Z/2);
                 //printf("Setting %d to (%d,%d)\n", free.front(), new_x, new_z);
+                tiles[free.front()]->show = false;
                 tiles[free.front()]->set_xz(new_x,new_z);
                 free.pop();
             }
@@ -153,6 +157,7 @@ void Terrain::update()
                 tiles[i]->needs_rebuild = false;
             }
             if (tiles[i]->needs_gen == false) continue;
+
             printf("Re-generating tile %d\n", i);
 
             // update the heightmap
@@ -167,6 +172,7 @@ void Terrain::update()
             // update the vertices
             tiles[i]->update_vertices();
             tiles[i]->needs_gen = false;
+            tiles[i]->show = true;
         }
 
         //printf("%fs\n", clock.restart().asSeconds());
@@ -181,6 +187,8 @@ void Terrain::render()
     sf::Texture::bind(&texture);
 
     for(int i=0; i<NUM_TILES; i++) {
+        // check if tile is ready to be drawn
+        if (!tiles[i]->show) continue;
         // absolute world position of this tile
         glm::vec3 wp(tiles[i]->world_x(), 0, tiles[i]->world_z());
         // move the model matrix to that position

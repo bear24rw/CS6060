@@ -7,8 +7,8 @@
 #include "tile.h"
 #include "camera.h"
 
-#define NUM_TILES_X 10
-#define NUM_TILES_Z 10
+#define NUM_TILES_X 11
+#define NUM_TILES_Z 11
 #define NUM_TILES   (NUM_TILES_X*NUM_TILES_Z)
 
 class Terrain {
@@ -18,6 +18,7 @@ class Terrain {
         void render(void);
         void update(void);
         float get_height(int,int);
+        float get_height(float,float);
     private:
         //std::vector<Tile*> tiles;
         Tile *tiles[NUM_TILES];

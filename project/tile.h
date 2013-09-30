@@ -31,6 +31,7 @@ class Tile {
         float height[TILE_SIZE+1][TILE_SIZE+1];
         void lod(int);
         int lod(void);
+        bool show;
     private:
         int _lod;
         int lod_step;

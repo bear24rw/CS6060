@@ -115,6 +115,8 @@ int main()
     bool key_up = false;
     bool key_down = false;
 
+    bool lock_to_ground = false;
+
     sf::Clock clock;
     sf::Clock fps_counter;
     while ( window.isOpen() )
@@ -160,6 +162,9 @@ int main()
                         break;
                     case sf::Keyboard::N:
                         draw_norms = !draw_norms;
+                        break;
+                    case sf::Keyboard::L:
+                        lock_to_ground = !lock_to_ground;
                         break;
                 }
             } else if (event.type == sf::Event::KeyReleased) {
@@ -222,6 +227,8 @@ int main()
         if (key_d) cam.translate(cam.right * delta.asSeconds() * SPEED);
         if (key_up) cam.translate(cam.up * delta.asSeconds() * SPEED);
         if (key_down) cam.translate(-cam.up * delta.asSeconds() * SPEED);
+
+        if (lock_to_ground) cam.position.y = terrain.get_height(cam.position.x, cam.position.z) + 1.7;
 
         // clear the screen to black
         glClearColor(0.5, 0.5, 0.5, 0.0);

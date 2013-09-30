@@ -42,6 +42,7 @@ Tile::Tile(GLuint shader_id, int x, int z)
     reload_ebo = false;
     needs_rebuild = false;
     needs_gen = true;
+    show = false;
 
     lod(0);
     set_xz(x,z);
@@ -93,12 +94,13 @@ void Tile::update_vertices()
     sf::Clock clock;
     clock.restart();
 
-    float lod_color[5][3] = {
+    float lod_color[6][3] = {
         {1.0f, 0.8f, 0.8f},     // 1 - red
         {0.8f, 1.0f, 0.8f},     // 2 - green
         {0.8f, 0.8f, 1.0f},     // 4 - blue
         {1.0f, 0.8f, 1.0f},     // 8 - purple
         {1.0f, 1.0f, 0.8f},     // 16 - yellow
+        {0.8f, 1.0f, 1.0f},     // 32 - teal
     };
 
     vbo_mutex.lock();
@@ -127,6 +129,9 @@ void Tile::update_vertices()
             vertices.push_back(lod_color[_lod][0]);
             vertices.push_back(lod_color[_lod][1]);
             vertices.push_back(lod_color[_lod][2]);
+            //vertices.push_back(1.0f);
+            //vertices.push_back(1.0f);
+            //vertices.push_back(1.0f);
         }
     }
     reload_vbo = true;
