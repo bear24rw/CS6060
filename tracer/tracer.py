@@ -19,7 +19,7 @@ while 1:
                 points.pop()
         if event.type == pygame.KEYDOWN and event.key == pygame.K_s:
             with open("data.h", "w") as f:
-                f.write("static const GLfloat g_vertex_buffer_data[] = {\n")
+                f.write("static const GLfloat lines[] = {\n")
                 for x,y in points:
                     y = image.get_size()[1] - y # flip the y
                     x -= image.get_size()[0]/2.0
