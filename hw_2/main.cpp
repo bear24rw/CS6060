@@ -24,10 +24,6 @@ int main()
     glewExperimental = GL_TRUE;
     glewInit();
 
-	GLuint vao;
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
-
     GLuint vbo;
     glGenBuffers(1, &vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -47,9 +43,9 @@ int main()
             glm::vec3(0,1,0)        // up
             );
 
-	glm::mat4 model      = glm::mat4(1.0f);
+	glm::mat4 model = glm::mat4(1.0f);
 
-	glm::mat4 mvp        = projection * view * model;
+	glm::mat4 mvp = projection * view * model;
 
     while ( window.isOpen() )
     {
@@ -68,8 +64,6 @@ int main()
                 }
             }
         }
-
-		glClear(GL_COLOR_BUFFER_BIT);
 
 		glUseProgram(shader_id);
         glUniformMatrix4fv(mvp_id, 1, GL_FALSE, glm::value_ptr(mvp));
