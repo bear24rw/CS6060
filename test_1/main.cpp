@@ -7,6 +7,7 @@
 #include <ctime>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "shader.h"
 
@@ -124,28 +125,15 @@ int main()
     glVertexAttribPointer(cube_posAttrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glVertexAttribPointer(cube_norAttrib, 3, GL_FLOAT, GL_FALSE, 0, (void*)(3*4*6*sizeof(GLfloat)));
 
-    //
-    // Setup the projection and view matrices
-    //
-
-	glm::mat4 projection = glm::perspective(45.0f, 4.0f / 3.0f, 0.1f, 1000.0f);
-
-    glm::mat4 view = glm::lookAt(
-            glm::vec3(80,80,80),     // position
-            glm::vec3(15,30,24),       // target
-            glm::vec3(0,1,0)        // up
-            );
-
-    glm::mat4 mvp = projection * view * glm::mat4(1.0f);
 
     // scale the unit cube to create all the parts
+    glm::mat4 cam_hing    = glm::scale(glm::mat4(1.0f), glm::vec3( 1.0f,  1.0f,  1.0f));
     glm::mat4 cam_body    = glm::scale(glm::mat4(1.0f), glm::vec3( 3.0f,  6.0f,  4.0f));
     glm::mat4 cam_lens    = glm::scale(glm::mat4(1.0f), glm::vec3( 2.0f,  1.0f,  2.0f));
-    glm::mat4 cam_hing    = glm::scale(glm::mat4(1.0f), glm::vec3( 1.0f,  1.0f,  1.0f));
-    glm::mat4 shaft_body  = glm::scale(glm::mat4(1.0f), glm::vec3( 2.0f, 20.0f,  2.0f));
     glm::mat4 shaft_hing  = glm::scale(glm::mat4(1.0f), glm::vec3( 1.0f,  2.0f,  1.0f));
-    glm::mat4 base_body   = glm::scale(glm::mat4(1.0f), glm::vec3(12.0f,  2.0f, 20.0f));
+    glm::mat4 shaft_body  = glm::scale(glm::mat4(1.0f), glm::vec3( 2.0f, 20.0f,  2.0f));
     glm::mat4 base_hing   = glm::scale(glm::mat4(1.0f), glm::vec3( 6.0f,  3.0f,  6.0f));
+    glm::mat4 base_body   = glm::scale(glm::mat4(1.0f), glm::vec3(12.0f,  2.0f, 20.0f));
     glm::mat4 desk_top    = glm::scale(glm::mat4(1.0f), glm::vec3(30.0f,  2.0f, 48.0f));
     glm::mat4 desk_leg_1  = glm::scale(glm::mat4(1.0f), glm::vec3( 4.0f, 28.0f,  4.0f));
     glm::mat4 desk_leg_2  = glm::scale(glm::mat4(1.0f), glm::vec3( 4.0f, 28.0f,  4.0f));
@@ -153,9 +141,9 @@ int main()
     glm::mat4 desk_leg_4  = glm::scale(glm::mat4(1.0f), glm::vec3( 4.0f, 28.0f,  4.0f));
 
     // define the translations to assemble each part in their local object coordinate system
-    glm::mat4 cam_lens_mcs   = glm::translate(glm::mat4(1.0f), glm::vec3( 0.5f, -1.0f,  1.0f));
-    glm::mat4 cam_body_mcs   = glm::translate(glm::mat4(1.0f), glm::vec3( 1.0f, -3.0f, -2.0f));
     glm::mat4 cam_hing_mcs   = glm::translate(glm::mat4(1.0f), glm::vec3( 0.0f,  0.0f,  0.0f));
+    glm::mat4 cam_body_mcs   = glm::translate(glm::mat4(1.0f), glm::vec3( 1.0f, -3.0f, -2.0f));
+    glm::mat4 cam_lens_mcs   = glm::translate(glm::mat4(1.0f), glm::vec3( 1.5f, -4.0f,  0.0f));
     glm::mat4 shaft_hing_scs = glm::translate(glm::mat4(1.0f), glm::vec3( 2.0f, 15.0f,  0.5f));
     glm::mat4 shaft_body_scs = glm::translate(glm::mat4(1.0f), glm::vec3( 0.0f,  0.0f,  0.0f));
     glm::mat4 base_body_bcs  = glm::translate(glm::mat4(1.0f), glm::vec3( 0.0f,  0.0f,  0.0f));
@@ -181,16 +169,16 @@ int main()
 
     // define the translations to assemble each component group into the OCS
     glm::mat4 base_ocs = glm::mat4(1.0f);
-    glm::mat4 base_hing_ocs = base_ocs * base_body_bcs * base_hing_bcs;
+    glm::mat4 base_hing_ocs = base_ocs * base_hing_bcs;
     glm::mat4 base_body_ocs = base_ocs * base_body_bcs;
 
     glm::mat4 shaft_ocs = glm::translate(base_hing_ocs, glm::vec3(2.0f, 0.0f, 2.0f));
-    glm::mat4 shaft_hing_ocs = shaft_ocs * shaft_body_scs * shaft_hing_scs;
+    glm::mat4 shaft_hing_ocs = shaft_ocs * shaft_hing_scs;
     glm::mat4 shaft_body_ocs = shaft_ocs * shaft_body_scs;
 
     glm::mat4 cam_ocs = shaft_hing_ocs;
-    glm::mat4 cam_lens_ocs = cam_ocs * cam_hing_mcs * cam_body_mcs * cam_lens_mcs;
-    glm::mat4 cam_body_ocs = cam_ocs * cam_hing_mcs * cam_body_mcs;
+    glm::mat4 cam_lens_ocs = cam_ocs * cam_lens_mcs;
+    glm::mat4 cam_body_ocs = cam_ocs * cam_body_mcs;
     glm::mat4 cam_hing_ocs = cam_ocs * cam_hing_mcs;
 
     // define the translations to assemble the OCS in world space (WCS)
@@ -201,6 +189,26 @@ int main()
     glm::mat4 cam_lens_wcs   = ocs_wcs * cam_lens_ocs;
     glm::mat4 cam_body_wcs   = ocs_wcs * cam_body_ocs;
     glm::mat4 cam_hing_wcs   = ocs_wcs * cam_hing_ocs;
+
+
+    //
+    // Setup the projection and view matrices
+    //
+
+    // simple camera
+    float camera_dist = 80.0f;
+    glm::vec3 camera(camera_dist, 0.0f, 0.0f);
+
+	//glm::mat4 projection = glm::perspective(45.0f, 4.0f / 3.0f, 0.1f, 1000.0f);
+	glm::mat4 projection = glm::ortho(-100.0f, 100.0f, -100.0f, 100.0f, 1.0f, 1000.0f);
+
+    glm::mat4 view = glm::lookAt(
+            camera,     // position
+            glm::vec3(0,0,0),       // target
+            glm::vec3(0,1,0)        // up
+            );
+
+    glm::mat4 mvp = projection * view * glm::mat4(1.0f);
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
@@ -220,9 +228,37 @@ int main()
                     case sf::Keyboard::Escape:
                         window.close();
                         break;
+                    case sf::Keyboard::Left:
+                        camera = glm::rotateY(camera, 45.0f);
+                        view = glm::rotate(view, 45.0f, glm::vec3(0,1,0));
+                        break;
+                    case sf::Keyboard::Right:
+                        camera = glm::rotateY(camera, -45.0f);
+                        view = glm::rotate(view, -45.0f, glm::vec3(0,1,0));
+                        break;
+                    case sf::Keyboard::Up:
+                        camera = glm::rotate(camera, 45.0f, glm::vec3(1,0,1));
+                        break;
+                    case sf::Keyboard::Down:
+                        camera = glm::rotate(camera, -45.0f, glm::vec3(1,0,1));
+                        break;
+                    case sf::Keyboard::PageUp:
+                        camera *= 0.8f;
+                        break;
+                    case sf::Keyboard::PageDown:
+                        camera *= 1.8f;
+                        break;
                 }
+                printf("Camera: %f %f %f\n", camera.x, camera.y, camera.z);
             }
         }
+/*
+        view = glm::lookAt(
+                camera - glm::vec3(15.0f, 0.0f, 24.0f), // position
+                glm::vec3(15.0f,0,24.0f),       // target
+                glm::vec3(0,1,0)        // up
+                );
+                */
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glClearColor(0.8, 0.8, 0.8, 0.0);
