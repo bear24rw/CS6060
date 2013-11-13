@@ -11,12 +11,29 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "shader.h"
 
+GLint cube_model_id = -1;
+GLint cube_view_id = -1;
+GLint cube_proj_id = -1;
+GLint cube_color_id =-1;
+
+glm::mat4 view;
+glm::mat4 projection;
+
+void draw_cube(glm::mat4 cube_model, glm::vec3 color)
+{
+    glUniformMatrix4fv(cube_model_id, 1, GL_FALSE, glm::value_ptr(cube_model));
+    glUniformMatrix4fv(cube_view_id, 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(cube_proj_id, 1, GL_FALSE, glm::value_ptr(projection));
+    glUniform3f(cube_color_id, color.x, color.y, color.z);
+    glDrawArrays(GL_QUADS, 0, 24);
+}
+
 int main()
 {
     sf::ContextSettings contextSettings;
     contextSettings.depthBits = 32;
 
-    sf::RenderWindow window(sf::VideoMode(800, 600), "Test 1", sf::Style::Default, contextSettings);
+    sf::RenderWindow window(sf::VideoMode(800, 800), "Test 1", sf::Style::Default, contextSettings);
     window.setVerticalSyncEnabled(true);
 
     window.setActive();
@@ -33,38 +50,16 @@ int main()
     std::vector<float> default_verts;
 
     for(int k = 0; k<GRID_SIZE; k++) {
-        // start of k line
-        default_verts.push_back(k);
-        default_verts.push_back(0);
-        default_verts.push_back(0);
-        //color
-        default_verts.push_back(1);
-        default_verts.push_back(0);
-        default_verts.push_back(0);
-        // end of k line
-        default_verts.push_back(k);
-        default_verts.push_back(0);
-        default_verts.push_back(GRID_SIZE);
-        //color
-        default_verts.push_back(1);
-        default_verts.push_back(0);
-        default_verts.push_back(0);
-        // start of z line
-        default_verts.push_back(0);
-        default_verts.push_back(0);
-        default_verts.push_back(k);
-        //color
-        default_verts.push_back(0);
-        default_verts.push_back(0);
-        default_verts.push_back(1);
-        // end of z line
-        default_verts.push_back(GRID_SIZE);
-        default_verts.push_back(0);
-        default_verts.push_back(k);
-        //color
-        default_verts.push_back(0);
-        default_verts.push_back(0);
-        default_verts.push_back(1);
+        // start of x line / color / end of x line / color
+        default_verts.push_back(k); default_verts.push_back(0); default_verts.push_back(0);
+        default_verts.push_back(1); default_verts.push_back(0); default_verts.push_back(0);
+        default_verts.push_back(k); default_verts.push_back(0); default_verts.push_back(GRID_SIZE);
+        default_verts.push_back(1); default_verts.push_back(0); default_verts.push_back(0);
+        // start of z line / color / end of z line / color
+        default_verts.push_back(0); default_verts.push_back(0); default_verts.push_back(k);
+        default_verts.push_back(0); default_verts.push_back(0); default_verts.push_back(1);
+        default_verts.push_back(GRID_SIZE); default_verts.push_back(0); default_verts.push_back(k);
+        default_verts.push_back(0); default_verts.push_back(0); default_verts.push_back(1);
     }
 
     GLuint default_vao;
@@ -116,8 +111,10 @@ int main()
 	glBufferData(GL_ARRAY_BUFFER, sizeof(cube_verts), cube_verts, GL_STATIC_DRAW);
 
     GLuint cube_shader_id = LoadShaders("cube_vert.glsl", "cube_frag.glsl");
-    GLint cube_mvp_id = glGetUniformLocation(cube_shader_id, "mvp");
-    GLint cube_color_id = glGetUniformLocation(cube_shader_id, "color");
+    cube_model_id = glGetUniformLocation(cube_shader_id, "model");
+    cube_view_id = glGetUniformLocation(cube_shader_id, "view");
+    cube_proj_id = glGetUniformLocation(cube_shader_id, "proj");
+    cube_color_id = glGetUniformLocation(cube_shader_id, "color");
     GLint cube_posAttrib = glGetAttribLocation(cube_shader_id, "position");
     GLint cube_norAttrib = glGetAttribLocation(cube_shader_id, "normal");
     glEnableVertexAttribArray(cube_posAttrib);
@@ -130,7 +127,7 @@ int main()
     glm::mat4 cam_hing    = glm::scale(glm::mat4(1.0f), glm::vec3( 1.0f,  1.0f,  1.0f));
     glm::mat4 cam_body    = glm::scale(glm::mat4(1.0f), glm::vec3( 3.0f,  6.0f,  4.0f));
     glm::mat4 cam_lens    = glm::scale(glm::mat4(1.0f), glm::vec3( 2.0f,  1.0f,  2.0f));
-    glm::mat4 shaft_hing  = glm::scale(glm::mat4(1.0f), glm::vec3( 1.0f,  2.0f,  1.0f));
+    glm::mat4 shaft_hing  = glm::scale(glm::mat4(1.0f), glm::vec3( 2.0f,  1.0f,  1.0f));
     glm::mat4 shaft_body  = glm::scale(glm::mat4(1.0f), glm::vec3( 2.0f, 20.0f,  2.0f));
     glm::mat4 base_hing   = glm::scale(glm::mat4(1.0f), glm::vec3( 6.0f,  3.0f,  6.0f));
     glm::mat4 base_body   = glm::scale(glm::mat4(1.0f), glm::vec3(12.0f,  2.0f, 20.0f));
@@ -144,7 +141,7 @@ int main()
     glm::mat4 cam_hing_mcs   = glm::translate(glm::mat4(1.0f), glm::vec3( 0.0f,  0.0f,  0.0f));
     glm::mat4 cam_body_mcs   = glm::translate(glm::mat4(1.0f), glm::vec3( 1.0f, -3.0f, -2.0f));
     glm::mat4 cam_lens_mcs   = glm::translate(glm::mat4(1.0f), glm::vec3( 1.5f, -4.0f,  0.0f));
-    glm::mat4 shaft_hing_scs = glm::translate(glm::mat4(1.0f), glm::vec3( 2.0f, 15.0f,  0.5f));
+    glm::mat4 shaft_hing_scs = glm::translate(glm::mat4(1.0f), glm::vec3( 0.5f, 15.0f,  2.0f));
     glm::mat4 shaft_body_scs = glm::translate(glm::mat4(1.0f), glm::vec3( 0.0f,  0.0f,  0.0f));
     glm::mat4 base_body_bcs  = glm::translate(glm::mat4(1.0f), glm::vec3( 0.0f,  0.0f,  0.0f));
     glm::mat4 base_hing_bcs  = glm::translate(glm::mat4(1.0f), glm::vec3( 3.0f,  2.0f,  2.0f));
@@ -172,11 +169,15 @@ int main()
     glm::mat4 base_hing_ocs = base_ocs * base_hing_bcs;
     glm::mat4 base_body_ocs = base_ocs * base_body_bcs;
 
-    glm::mat4 shaft_ocs = glm::translate(base_hing_ocs, glm::vec3(2.0f, 0.0f, 2.0f));
+    glm::mat4 shaft_ocs = glm::rotate(glm::mat4(1.0f), 30.0f, glm::vec3(1,0,0));
+              shaft_ocs = base_hing_ocs * shaft_ocs;
+              shaft_ocs = glm::translate(shaft_ocs, glm::vec3(2.0f, 0.0f, 2.0f));
     glm::mat4 shaft_hing_ocs = shaft_ocs * shaft_hing_scs;
     glm::mat4 shaft_body_ocs = shaft_ocs * shaft_body_scs;
 
-    glm::mat4 cam_ocs = shaft_hing_ocs;
+    glm::mat4 cam_ocs = glm::rotate(glm::mat4(1.0f), -45.0f, glm::vec3(1,0,0));
+              cam_ocs = shaft_hing_ocs * cam_ocs;
+              cam_ocs = glm::translate(cam_ocs, glm::vec3(2.0f, 0.0f, 0.0f));
     glm::mat4 cam_lens_ocs = cam_ocs * cam_lens_mcs;
     glm::mat4 cam_body_ocs = cam_ocs * cam_body_mcs;
     glm::mat4 cam_hing_ocs = cam_ocs * cam_hing_mcs;
@@ -197,23 +198,18 @@ int main()
 
     // simple camera
     float camera_dist = 80.0f;
-    glm::vec3 camera(camera_dist, 0.0f, 0.0f);
+    float camera_angle_v = 0.0f;
+    float camera_angle_h = 0.0f;
+    glm::vec3 camera_target(15.0f, 25.0f, 24.0f);
 
-	//glm::mat4 projection = glm::perspective(45.0f, 4.0f / 3.0f, 0.1f, 1000.0f);
-	glm::mat4 projection = glm::ortho(-100.0f, 100.0f, -100.0f, 100.0f, 1.0f, 1000.0f);
+    projection = glm::perspective(45.0f, 1.0f, 0.1f, 1000.0f);
+	//glm::mat4 projection = glm::ortho(-100.0f, 100.0f, -100.0f, 100.0f, 1.0f, 1000.0f);
 
-    glm::mat4 view = glm::lookAt(
-            camera,     // position
-            glm::vec3(0,0,0),       // target
-            glm::vec3(0,1,0)        // up
-            );
-
-    glm::mat4 mvp = projection * view * glm::mat4(1.0f);
+    int poly_mode = 0;
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
-    printf("Starting...\n");
     while (window.isOpen())
     {
         sf::Event event;
@@ -228,40 +224,77 @@ int main()
                     case sf::Keyboard::Escape:
                         window.close();
                         break;
+                    case sf::Keyboard::P:
+                        poly_mode = !poly_mode;
+                        break;
                     case sf::Keyboard::Left:
-                        camera = glm::rotateY(camera, 45.0f);
-                        view = glm::rotate(view, 45.0f, glm::vec3(0,1,0));
+                        camera_angle_h -= (M_PI / 4);
                         break;
                     case sf::Keyboard::Right:
-                        camera = glm::rotateY(camera, -45.0f);
-                        view = glm::rotate(view, -45.0f, glm::vec3(0,1,0));
+                        camera_angle_h += (M_PI/ 4);
                         break;
                     case sf::Keyboard::Up:
-                        camera = glm::rotate(camera, 45.0f, glm::vec3(1,0,1));
+                        camera_angle_v -= (M_PI / 4);
                         break;
                     case sf::Keyboard::Down:
-                        camera = glm::rotate(camera, -45.0f, glm::vec3(1,0,1));
+                        camera_angle_v += (M_PI / 4);
                         break;
                     case sf::Keyboard::PageUp:
-                        camera *= 0.8f;
+                        camera_dist *= 0.9f;
                         break;
                     case sf::Keyboard::PageDown:
-                        camera *= 1.8f;
+                        camera_dist *= 1.1f;
+                        break;
+                    case sf::Keyboard::Space:
+                        camera_target = glm::vec3(15.0f, 25.0f, 24.0f);
+                        break;
+                    case sf::Keyboard::C:
+                        camera_target = glm::vec3(0.0f, 0.0f, 0.0f);
+                        break;
+                    case sf::Keyboard::A:
+                        camera_target.x -= 1;
+                        break;
+                    case sf::Keyboard::D:
+                        camera_target.x += 1;
+                        break;
+                    case sf::Keyboard::S:
+                        camera_target.z -= 1;
+                        break;
+                    case sf::Keyboard::W:
+                        camera_target.z += 1;
+                        break;
+                    case sf::Keyboard::E:
+                        camera_target.y -= 1;
+                        break;
+                    case sf::Keyboard::Q:
+                        camera_target.y += 1;
                         break;
                 }
-                printf("Camera: %f %f %f\n", camera.x, camera.y, camera.z);
             }
         }
-/*
+
+        glm::vec3 camera_direction(
+                cos(camera_angle_v) * sin(camera_angle_h),
+                sin(camera_angle_v),
+                cos(camera_angle_v) * cos(camera_angle_h)
+                );
+
         view = glm::lookAt(
-                camera - glm::vec3(15.0f, 0.0f, 24.0f), // position
-                glm::vec3(15.0f,0,24.0f),       // target
+                (camera_dist * camera_direction) + camera_target, // position
+                camera_target,       // target
                 glm::vec3(0,1,0)        // up
                 );
-                */
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glClearColor(0.8, 0.8, 0.8, 0.0);
+
+        if (poly_mode) {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            glLineWidth(2);
+        } else {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            glLineWidth(1);
+        }
 
         //
         // Draw the body
@@ -273,89 +306,45 @@ int main()
         glBindVertexArray(cube_vao);
         glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
 
-        // camera lense
-        mvp = projection * view * cam_lens_wcs * cam_lens;
-        color = glm::vec3(1.0f, 0.0f, 0.0f);
-        glUniformMatrix4fv(cube_mvp_id, 1, GL_FALSE, glm::value_ptr(mvp));
-        glUniform3f(cube_color_id, color.x, color.y, color.z);
-        glDrawArrays(GL_QUADS, 0, 24);
+        /*
+        glm::mat4 cam_lens_mvp   = cam_lens_wcs   * cam_lens;
+        glm::mat4 cam_body_mvp   = cam_body_wcs   * cam_body;
+        glm::mat4 cam_hing_mvp   = cam_hing_wcs   * cam_hing;
+        glm::mat4 shaft_hing_mvp = shaft_hing_wcs * shaft_hing;
+        glm::mat4 shaft_body_mvp = shaft_body_wcs * shaft_body;
+        glm::mat4 base_hing_mvp  = base_hing_wcs  * base_hing;
+        glm::mat4 base_body_mvp  = base_body_wcs  * base_body;
+        glm::mat4 desk_top_mvp   = desk_top_wcs   * desk_top;
+        glm::mat4 desk_leg_1_mvp = desk_leg_1_wcs * desk_leg_1;
+        glm::mat4 desk_leg_2_mvp = desk_leg_2_wcs * desk_leg_2;
+        glm::mat4 desk_leg_3_mvp = desk_leg_3_wcs * desk_leg_3;
+        glm::mat4 desk_leg_4_mvp = desk_leg_4_wcs * desk_leg_4;
 
-        // camera body
-        mvp = projection * view * cam_body_wcs * cam_body;
-        color = glm::vec3(1.0f, 1.0f, 0.0f);
-        glUniformMatrix4fv(cube_mvp_id, 1, GL_FALSE, glm::value_ptr(mvp));
-        glUniform3f(cube_color_id, color.x, color.y, color.z);
-        glDrawArrays(GL_QUADS, 0, 24);
+        draw_cube(cam_lens_mvp   , glm::vec3(0.0f, 0.0f, 1.0f));
+        draw_cube(cam_body_mvp   , glm::vec3(0.0f, 1.0f, 0.0f));
+        draw_cube(cam_hing_mvp   , glm::vec3(0.0f, 1.0f, 1.0f));
+        draw_cube(shaft_hing_mvp , glm::vec3(1.0f, 0.0f, 0.0f));
+        draw_cube(shaft_body_mvp , glm::vec3(1.0f, 0.0f, 1.0f));
+        draw_cube(base_hing_mvp  , glm::vec3(1.0f, 1.0f, 0.0f));
+        draw_cube(base_body_mvp  , glm::vec3(1.0f, 1.0f, 0.5f));
+        draw_cube(desk_top_mvp   , glm::vec3(0.5f, 0.0f, 0.5f));
+        draw_cube(desk_leg_1_mvp , glm::vec3(0.5f, 0.0f, 0.5f));
+        draw_cube(desk_leg_2_mvp , glm::vec3(0.5f, 0.0f, 0.5f));
+        draw_cube(desk_leg_3_mvp , glm::vec3(0.5f, 0.0f, 0.5f));
+        draw_cube(desk_leg_4_mvp , glm::vec3(0.5f, 0.0f, 0.5f));
+        */
 
-        // camera hinge
-        mvp = projection * view * cam_hing_wcs * cam_hing;
-        color = glm::vec3(1.0f, 0.0f, 1.0f);
-        glUniformMatrix4fv(cube_mvp_id, 1, GL_FALSE, glm::value_ptr(mvp));
-        glUniform3f(cube_color_id, color.x, color.y, color.z);
-        glDrawArrays(GL_QUADS, 0, 24);
+        glm::mat4 cam_lens_mvp = cam_lens_mcs   * cam_lens;
+        glm::mat4 cam_body_mvp = cam_body_mcs   * cam_body;
+        glm::mat4 cam_hing_mvp = cam_hing_mcs   * cam_hing;
+        draw_cube(cam_lens_mvp   , glm::vec3(0.0f, 0.0f, 1.0f));
+        draw_cube(cam_body_mvp   , glm::vec3(0.0f, 1.0f, 0.0f));
+        draw_cube(cam_hing_mvp   , glm::vec3(0.0f, 1.0f, 1.0f));
 
-        // shaft hing
-        mvp = projection * view * shaft_hing_wcs * shaft_hing;
-        color = glm::vec3(0.0f, 0.0f, 1.0f);
-        glUniformMatrix4fv(cube_mvp_id, 1, GL_FALSE, glm::value_ptr(mvp));
-        glUniform3f(cube_color_id, color.x, color.y, color.z);
-        glDrawArrays(GL_QUADS, 0, 24);
-
-        // shaft body
-        mvp = projection * view * shaft_body_wcs * shaft_body;
-        color = glm::vec3(0.0f, 1.0f, 1.0f);
-        glUniformMatrix4fv(cube_mvp_id, 1, GL_FALSE, glm::value_ptr(mvp));
-        glUniform3f(cube_color_id, color.x, color.y, color.z);
-        glDrawArrays(GL_QUADS, 0, 24);
-
-        // baseboard hing
-        mvp = projection * view * base_hing_wcs * base_hing;
-        color = glm::vec3(0.5f, 1.0f, 1.0f);
-        glUniformMatrix4fv(cube_mvp_id, 1, GL_FALSE, glm::value_ptr(mvp));
-        glUniform3f(cube_color_id, color.x, color.y, color.z);
-        glDrawArrays(GL_QUADS, 0, 24);
-
-        // baseboard body
-        mvp = projection * view * base_body_wcs * base_body;
-        color = glm::vec3(0.5f, 1.0f, 0.25f);
-        glUniformMatrix4fv(cube_mvp_id, 1, GL_FALSE, glm::value_ptr(mvp));
-        glUniform3f(cube_color_id, color.x, color.y, color.z);
-        glDrawArrays(GL_QUADS, 0, 24);
-
-        // desk top
-        mvp = projection * view * desk_top_wcs * desk_top;
-        color = glm::vec3(0.5f, 0.25f, 1.0f);
-        glUniformMatrix4fv(cube_mvp_id, 1, GL_FALSE, glm::value_ptr(mvp));
-        glUniform3f(cube_color_id, color.x, color.y, color.z);
-        glDrawArrays(GL_QUADS, 0, 24);
-
-        // desk leg 1
-        mvp = projection * view * desk_leg_1_wcs * desk_leg_1;
-        color = glm::vec3(0.5f, 0.25f, 1.0f);
-        glUniformMatrix4fv(cube_mvp_id, 1, GL_FALSE, glm::value_ptr(mvp));
-        glUniform3f(cube_color_id, color.x, color.y, color.z);
-        glDrawArrays(GL_QUADS, 0, 24);
-
-        // desk leg 2
-        mvp = projection * view * desk_leg_2_wcs * desk_leg_2;
-        color = glm::vec3(0.5f, 0.25f, 1.0f);
-        glUniformMatrix4fv(cube_mvp_id, 1, GL_FALSE, glm::value_ptr(mvp));
-        glUniform3f(cube_color_id, color.x, color.y, color.z);
-        glDrawArrays(GL_QUADS, 0, 24);
-
-        // desk leg 3
-        mvp = projection * view * desk_leg_3_wcs * desk_leg_3;
-        color = glm::vec3(0.5f, 0.25f, 1.0f);
-        glUniformMatrix4fv(cube_mvp_id, 1, GL_FALSE, glm::value_ptr(mvp));
-        glUniform3f(cube_color_id, color.x, color.y, color.z);
-        glDrawArrays(GL_QUADS, 0, 24);
-
-        // desk leg 4
-        mvp = projection * view * desk_leg_4_wcs * desk_leg_4;
-        color = glm::vec3(0.5f, 0.25f, 1.0f);
-        glUniformMatrix4fv(cube_mvp_id, 1, GL_FALSE, glm::value_ptr(mvp));
-        glUniform3f(cube_color_id, color.x, color.y, color.z);
-        glDrawArrays(GL_QUADS, 0, 24);
+        /*
+        glm::mat4 desk_top_mvp = desk_top_dcs * desk_top;
+        draw_cube(desk_top_mvp, view, projection, glm::vec3(0.5f, 0.0f, 0.5f));
+        */
 
         //
         // Draw the grid
@@ -365,7 +354,7 @@ int main()
         glBindVertexArray(default_vao);
         glBindBuffer(GL_ARRAY_BUFFER, default_vbo);
 
-        mvp = projection * view * glm::mat4(1.0f);
+        glm::mat4 mvp = projection * view * glm::mat4(1.0f);
         glUniformMatrix4fv(default_mvp_id, 1, GL_FALSE, glm::value_ptr(mvp));
 
         glDrawArrays(GL_LINES, 0, default_verts.size()/6);
