@@ -1,5 +1,5 @@
 TARGET = main
-LIBS = -lGL -lGLU -lsfml-graphics -lsfml-system
+LIBS = -lGL -lGLU -lsfml-graphics -lsfml-system -lsfml-window -lGLEW
 CC = g++
 CFLAGS = -O3 -Wall
 
